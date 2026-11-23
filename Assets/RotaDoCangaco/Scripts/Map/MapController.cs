@@ -86,7 +86,7 @@ namespace RotaDoCangaco
             worldRoot = new GameObject("Mundo").transform;
             worldRoot.SetParent(transform, false);
 
-            MapTexture = MapPainter.Paint(terrain, 12345);
+            MapTexture = MapPainter.Paint(terrain, 12345, layout: MapData.Layout);
             var mapGo = new GameObject("Terreno");
             mapGo.transform.SetParent(worldRoot, false);
             var mapSr = mapGo.AddComponent<SpriteRenderer>();
