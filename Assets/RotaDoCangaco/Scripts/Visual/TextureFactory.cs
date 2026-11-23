@@ -87,6 +87,7 @@ namespace RotaDoCangaco
         {
             if (card.Icon == "hero") return SpriteLibrary.Get("heroi");
             if (card.Icon == "mula") return SpriteLibrary.Get("mula_retrato");
+            if (card.Icon == "saci") return SpriteLibrary.Get("saci");
             string key = "icon_" + card.Icon + "_" + ColorUtility.ToHtmlStringRGB(card.Tint);
             if (cache.TryGetValue(key, out var s)) return s;
             s = DrawIcon(card.Icon, card.Tint).ToSprite();

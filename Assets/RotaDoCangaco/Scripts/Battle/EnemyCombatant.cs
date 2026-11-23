@@ -118,7 +118,7 @@ namespace RotaDoCangaco
             if (move != Data.EnrageMove) return;
             Enraged = true;
             patternIndex = 0;
-            battle.Log($"{Name} entra em FÚRIA! O fogo arde mais forte!");
+            battle.Log($"{Name} entra em FÚRIA!");
         }
     }
 }

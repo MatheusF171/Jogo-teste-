@@ -97,6 +97,24 @@ namespace RotaDoCangaco
             mula.EnragedMoves.Add(Attack("Galope Infernal", 16));
             mula.EnragedMoves.Add(Summon("Chamar Fogos-Fátuos", "fogo"));
             Add(mula);
+            var saci = new EnemyData
+            {
+                Id = "saci", Name = "Saci-Pererê", SpriteKey = "saci", Habitat = "Pedra do Redemoinho",
+                Description = "Levanta poeira no lajedo e some no meio do redemoinho.",
+                Level = 8, MaxHp = 130, Xp = 45, Score = 1000, Range = 1, Speed = 2,
+                Charges = true, IsBoss = true, RandomStart = false,
+                Moves =
+                {
+                    Attack("Poeira nos Olhos", 6, 1, StatusType.Fraqueza, 2),
+                    Defend("Sumir na Poeira", 10),
+                    Attack("Rodopio", 6, 2),
+                },
+                EnrageMove = Buff("Vento no Lajedo", StatusType.Forca, 2, 12, true),
+            };
+            saci.EnragedMoves.Add(Attack("Redemoinho", 9, 2));
+            saci.EnragedMoves.Add(Attack("Poeira nos Olhos", 8, 1, StatusType.Fraqueza, 2));
+            saci.EnragedMoves.Add(Defend("Sumir na Poeira", 10));
+            Add(saci);
         }
     }
 }

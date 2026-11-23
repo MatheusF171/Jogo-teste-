@@ -68,6 +68,28 @@ namespace RotaDoCangaco
 
         public static int Width => Layout[0].Length;
         public static int Height => Layout.Length;
+
+        public static readonly MapPhase Canavial = new MapPhase(PhaseTitle, RegionName, Layout, Encounters);
+        public const string TerrainTiles = "#.,~=W_TK";
+    }
+
+    public sealed class MapPhase
+    {
+        public readonly string Title;
+        public readonly string Region;
+        public readonly string[] Layout;
+        public readonly Dictionary<char, EncounterData> Encounters;
+
+        public MapPhase(string title, string region, string[] layout, Dictionary<char, EncounterData> encounters)
+        {
+            Title = title;
+            Region = region;
+            Layout = layout;
+            Encounters = encounters;
+        }
+
+        public int Width => Layout[0].Length;
+        public int Height => Layout.Length;
     }
 
     public class QuizQuestion

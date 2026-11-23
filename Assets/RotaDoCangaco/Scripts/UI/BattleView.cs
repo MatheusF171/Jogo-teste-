@@ -28,7 +28,7 @@ namespace RotaDoCangaco
 
         RectTransform root, enemyLayer, handLayer, fxLayer, heroRt;
         RawImage background;
-        Texture2D fieldTexture, engenhoTexture;
+        Texture2D fieldTexture, engenhoTexture, sertaoTexture, lajedoTexture;
         Text titleText, turnText, comboText, comboHint, promptText, bannerText, logText, tooltipText;
         Text playerName, blockText, statusText, inPlayText, energyText, drawText, discardText, fatText;
         GameObject tooltip, blockBadge;
@@ -241,7 +241,7 @@ namespace RotaDoCangaco
 
         // ------------------------------------------------------------------ Ligação com a batalha
 
-        public void Bind(BattleSystem b)
+        public void Bind(BattleSystem b, bool sertao)
         {
             Unbind();
             battle = b;
@@ -249,7 +249,14 @@ namespace RotaDoCangaco
             busy = false;
             targeting = null;
 
-            if (b.IsBossBattle)
+            if (sertao)
+            {
+                if (b.IsBossBattle)
+                    background.texture = lajedoTexture ?? (lajedoTexture = MapPainter.PaintArena(true, 7, true));
+                else
+                    background.texture = sertaoTexture ?? (sertaoTexture = MapPainter.PaintArena(false, 3, true));
+            }
+            else if (b.IsBossBattle)
             {
                 if (engenhoTexture == null) engenhoTexture = MapPainter.PaintArena(true, 7);
                 background.texture = engenhoTexture;

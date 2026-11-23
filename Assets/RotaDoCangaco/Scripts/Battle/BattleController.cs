@@ -37,10 +37,10 @@ namespace RotaDoCangaco
             busy = false;
             finishing = false;
             Battle = new BattleSystem(game.Player, encounter, new System.Random(game.Rng.Next()));
-            view.Bind(Battle);
+            view.Bind(Battle, game.Map.Phase == SertaoMap.Phase);
             Battle.Start();
             view.SetTargeting(null);
-            view.ShowBanner(Battle.IsBossBattle ? "A MULA SEM CABEÇA!" : "Turno 1");
+            view.ShowBanner(Battle.IsBossBattle ? encounter.Leader.Name.ToUpperInvariant() + "!" : "Turno 1");
             view.Refresh();
         }
 

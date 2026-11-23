@@ -62,9 +62,9 @@ namespace RotaDoCangaco
     {
         public BossEntity(char key, EncounterData data, Vector2Int pos) : base(key, data, pos) { }
 
-        public override string Tooltip => "<b>CHEFE: Mula Sem Cabeça</b> — a Fúria Sem Cabeça guarda o velho engenho.";
+        public override string Tooltip => $"<b>CHEFE: {Data.Leader.Name}</b> — {Data.Title}";
         public override Color MinimapColor => new Color(1f, 0.2f, 0.6f);
-        public override Sprite Sprite => SpriteLibrary.Get("mula_retrato");
+        public override Sprite Sprite => SpriteLibrary.Get(Data.Leader.Id == "mula" ? "mula_retrato" : Data.Leader.SpriteKey);
         public override float SpriteSize => 1.7f;
         public override Color GlowColor => new Color(1f, 0.25f, 0.35f, 0.45f);
 
@@ -163,10 +163,15 @@ namespace RotaDoCangaco
     public class ExitEntity : MapEntity
     {
         public bool Active;
-        public ExitEntity(Vector2Int pos) { Pos = pos; }
+        readonly string title;
+        public ExitEntity(Vector2Int pos, string title)
+        {
+            Pos = pos;
+            this.title = title;
+        }
 
         public override bool Visible => Active;
-        public override string Tooltip => "<b>Porteira para o Sertão</b>: conclua a fase!";
+        public override string Tooltip => $"<b>{title}</b>: conclua a fase!";
         public override Color MinimapColor => new Color(1f, 0.95f, 0.5f);
         public override Sprite Sprite => TextureFactory.MapObject("portal");
         public override float SpriteSize => 1.2f;

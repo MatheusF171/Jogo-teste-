@@ -1,9 +1,8 @@
-# A Rota do Cangaço — Protótipo (Fase 1: Canavial Assombrado)
+# A Rota do Cangaço — Canavial Assombrado e Pedra do Redemoinho
 
 Jogo em **Unity + C#** baseado no documento *"Arquivo da etapa 1 de engenharia"*, usando a
 **opção de combate com cartas**. Visão de cima, exploração em grade inspirada em dungeon crawlers
-de cartas, uma única fase (a Zona da Mata canavieira do Nordeste, à noite) e a **Mula Sem Cabeça**
-como chefe final.
+de cartas. A viagem começa no Canavial Assombrado e segue para a Pedra do Redemoinho, no Sertão.
 
 ## Como abrir e jogar
 
@@ -34,12 +33,13 @@ como chefe final.
   - fim do turno: mão vai para o descarte, e o descarte é reembaralhado quando o monte acaba;
   - **inimigos em grupos que avançam** a cada turno (Longe → Médio → Perto), mostrando a intenção.
 - **Nível**: cada monstro derrotado dá XP (cerca de 1 nível por grupo). A cada nível, escolha 1 entre 3 cartas.
-- **Mapa único** (40x28), todo visível desde o início: monstros, baús, cordéis, fogueiras e o chefe.
+- **Dois mapas** de 40x28, com monstros, baús, cordéis e fogueiras.
   Morcegos e urubus **rondam e perseguem** o herói. Minimapa e visão do mapa inteiro.
 - **Monstros da região**: Sapo-Cururu, Morcego, Fogo-Fátuo, Urubu, Piranha (na ponte do rio), Escorpião e Queixada.
 - **Chefe: Mula Sem Cabeça** no velho engenho. Invoca Fogos-Fátuos, resiste ao Sono e entra em fúria com 50% da vida.
 - **Habilidade do chefe**: ao vencê-la, você ganha a carta **Fúria da Mula Sem Cabeça**
   (dano em área + Queimadura + escudo), que vai para o baralho.
+- **Sertão**: derrote a Mula e passe pela porteira do engenho com 1200 pontos. Você leva o mesmo herói, baralho e recursos para a Caatinga. Contorne o açude, enfrente o Saci no lajedo e siga até a saída. A vitória contra o Saci rende a carta **Redemoinho do Saci**.
 
 ### Animações do herói
 
@@ -98,7 +98,7 @@ comer tudo antes das lutas faz perder mais vidas.
 | RF02 Pontos e itens com perguntas de cultura | Cordéis no mapa (`QuizDatabase`, `GameManager.OpenQuiz`) |
 | RF03 HUD com pontos, vidas e progresso | `HudView` (vida, XP, corações, pontos, minimapa, progresso) |
 | RF04 Menu Iniciar / Instruções / Sair | `UIManager.BuildMenu` e `BuildInstructions` |
-| RF05 Vitória e derrota | Saída do engenho com pontuação mínima (1200) / Game Over ao perder as 3 vidas |
+| RF05 Vitória e derrota | Saída do lajedo após vencer o Saci / Game Over ao perder as 3 vidas |
 | RNF01 Offline | Nenhuma dependência de internet |
 | RNF02 POO com 3+ classes | ~40 classes, com herança e polimorfismo (ex.: `CardEffect`, `MapEntity`, `Combatant`) |
 
@@ -123,20 +123,20 @@ A interface e o mapa são montados **por código**: a cena só tem a câmera e u
 - **Cartas**: `CardDatabase.cs`. Cada carta é uma lista de efeitos, por exemplo
   `new DamageEffect(6), new StatusEffect(StatusType.Veneno, 2, EffectScope.Target)`.
 - **Monstros e chefe**: `EnemyDatabase.cs` (vida, alcance, velocidade e padrão de ações).
-- **Mapa**: `MapData.cs`. O mapa é desenhado em texto; a legenda está no comentário da classe.
+- **Mapas**: `MapData.cs` (Canavial) e `SertaoMap.cs` (Sertão). As grades são desenhadas em texto.
   Depois de editar, use **Rota do Cangaço → Validar mapa e simular partidas**: o comando confere se tudo é
-  alcançável e simula 600 partidas para checar o balanceamento (resultado em `Logs/simulacao.txt`).
+  alcançável nos dois mapas e simula 900 partidas do Canavial (resultado em `Logs/simulacao.txt`).
 - **Sprites**: ficam em `Assets/RotaDoCangaco/Resources/Sprites` e são importados como Sprite automaticamente.
   As artes originais (inclusive dos outros chefes, para as próximas fases) estão em `Assets/RotaDoCangaco/Arte/Originais`.
 
 ## Próximas fases (sugestão)
 
-Para cada nova região (Sertão, Agreste, Litoral):
+Para cada nova região (Agreste, Litoral):
 1. crie um novo mapa em texto;
 2. adicione os monstros da região (o Mandacaru já tem arte);
-3. adicione o chefe (Saci, Curupira, Boitatá, Iara, Boto e Lobisomem já têm arte);
+3. adicione o chefe (Curupira, Boitatá, Iara, Boto e Lobisomem já têm arte);
 4. crie a carta de habilidade ligada à lenda do chefe.
 
 ## Teste automático
 
-`RotaDoCangaco.exe -autotest "C:\pasta"` joga sozinho do menu até a vitória e salva capturas de tela e um log de erros.
+`RotaDoCangaco.exe -autotest "C:\pasta"` percorre as duas fases, confere a transição e a saída final e salva capturas de tela e um log.

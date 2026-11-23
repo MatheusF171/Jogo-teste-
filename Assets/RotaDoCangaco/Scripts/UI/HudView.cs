@@ -12,7 +12,7 @@ namespace RotaDoCangaco
     {
         GameManager game;
         RectTransform root;
-        Text nameText, scoreText, objectiveText, progressText, hoverText, toastText, overviewText, deckInfoText;
+        Text nameText, scoreText, title, objectiveText, progressText, hoverText, toastText, overviewText, deckInfoText;
         UIBar hpBar, xpBar;
         readonly List<Image> hearts = new List<Image>();
         GameObject hoverPanel;
@@ -72,7 +72,7 @@ namespace RotaDoCangaco
             deckInfoText.rectTransform.Place(new Vector2(0f, 1f), new Vector2(235, -178), new Vector2(420, 24));
 
             // Título e objetivo (topo central)
-            var title = UIFactory.Text(root, "Fase", $"{MapData.PhaseTitle}\n<size=18>{MapData.RegionName}</size>", 30, Color.white, TextAnchor.UpperCenter, FontStyle.Bold);
+            title = UIFactory.Text(root, "Fase", "", 30, Color.white, TextAnchor.UpperCenter, FontStyle.Bold);
             title.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -50), new Vector2(900, 80));
             objectiveText = UIFactory.Text(root, "Objetivo", "", 19, UIFactory.Accent, TextAnchor.UpperCenter);
             objectiveText.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -112), new Vector2(900, 30));
@@ -122,6 +122,9 @@ namespace RotaDoCangaco
         public void Bind(MapController map)
         {
             minimap.texture = map.MapTexture;
+            title.text = $"{map.Phase.Title}\n<size=18>{map.Phase.Region}</size>";
+            SetOverview(false);
+            SetHover(null);
             map.Changed -= Refresh;
             map.Changed += Refresh;
             Refresh();
@@ -144,13 +147,17 @@ namespace RotaDoCangaco
             deckInfoText.text = $"Baralho: {p.Deck.Count}  ·  Energia: {energy}{peso}";
             portraitAnim.SetFatStage(p.FatStage);
 
-            objectiveText.text = p.BossDefeated
-                ? $"Objetivo: chegue à porteira dourada do engenho (meta: {GameConfig.MinScoreToWin} pts)"
-                : "Objetivo: atravesse o canavial e derrote a Mula Sem Cabeça no velho engenho";
+            bool sertao = map.Phase == SertaoMap.Phase;
+            if (p.BossDefeated)
+                objectiveText.text = sertao ? "Objetivo: chegue à saída do lajedo"
+                    : $"Objetivo: chegue à porteira para o Sertão (meta: {GameConfig.MinScoreToWin} pts)";
+            else
+                objectiveText.text = sertao ? "Objetivo: derrote o Saci na Pedra do Redemoinho"
+                    : "Objetivo: derrote a Mula Sem Cabeça no velho engenho";
 
             int groupsLeft = map.All<EncounterEntity>().Count(e => !(e is BossEntity));
             progressText.text = $"Monstros derrotados: {p.MonstersDefeated}  ·  Grupos restantes: {groupsLeft}\n" +
-                                $"Chefe: {(p.BossDefeated ? "<color=#8CFF8C>derrotado</color>" : "<color=#FF7AA8>vivo, no engenho</color>")}";
+                                $"Chefe: {(p.BossDefeated ? "<color=#8CFF8C>derrotado</color>" : "<color=#FF7AA8>aguardando</color>")}";
 
             RebuildMarkers(map);
         }

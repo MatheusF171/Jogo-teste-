@@ -219,11 +219,66 @@ namespace RotaDoCangaco
             yield return Shot("18_saida");
             game.TryExit(exit);
             yield return new WaitForSeconds(0.6f);
-            yield return Shot("19_vitoria");
+            var player = game.Player;
+            int score = player.Score, cards = player.Deck.Count;
+            Click("Botao0");
+            yield return WaitFor(() => game.Map.Phase == SertaoMap.Phase, 3f);
+            if (!Check(game.Map.Phase == SertaoMap.Phase, "A porteira carregou o Sertão."))
+            {
+                Finish(game);
+                yield break;
+            }
+            Check(game.Player == player && player.Score == score && player.Deck.Count == cards,
+                "Jogador, pontos e baralho passaram para a fase 2.");
+            var sertaoExit = game.Map.All<ExitEntity>().First();
+            Check(!player.BossDefeated && !sertaoExit.Visible, "A saída do Sertão começa fechada.");
+            yield return new WaitForSeconds(0.8f);
+            yield return Shot("19_sertao");
 
+            var saci = game.Map.All<BossEntity>().First();
+            var route = game.Map.FindPath(game.Map.PlayerPos, saci.Pos, _ => true);
+            Check(route != null && route.Count > 0, "O início do Sertão tem caminho até o Saci.");
+            game.Map.TeleportPlayer(saci.Pos + Vector2Int.left);
+            game.ShowBossIntro(saci);
+            yield return Shot("20_saci_intro");
+            Click("Botao0");
+            yield return WaitFor(() => game.State == GameState.Battle, 3f);
+            if (!Check(game.State == GameState.Battle && game.Battle.Battle.Encounter.Leader.Id == "saci",
+                    "A batalha contra o Saci abriu."))
+            {
+                Finish(game);
+                yield break;
+            }
+            yield return new WaitForSeconds(1.4f);
+            yield return Shot("21_saci_batalha");
+            game.Battle.Battle.Enemies.First(e => e.Data.IsBoss).Hp = 8;
+            yield return game.Battle.AutoPlay(25, 0.25f);
+            yield return WaitFor(() => game.State != GameState.Battle, 10f);
+            Check(sertaoExit.Visible && player.Deck.Any(c => c.Id == "redemoinho"),
+                "Derrotar o Saci abre a saída e entrega a carta Redemoinho.");
+            Click("Continuar");
+            yield return new WaitForSeconds(0.3f);
+            yield return PickCardsUntilExploration(game);
+            game.Map.TeleportPlayer(sertaoExit.Pos);
+            game.TryExit(sertaoExit);
+            yield return new WaitForSeconds(0.6f);
+            Check(game.State == GameState.Ended, "A saída do Sertão encerra a partida.");
+            yield return Shot("22_vitoria");
+            Finish(game);
+        }
+
+        bool Check(bool passed, string message)
+        {
+            if (!passed) errors++;
+            log.AppendLine((passed ? "OK: " : "FALHOU: ") + message);
+            return passed;
+        }
+
+        void Finish(GameManager game)
+        {
             log.AppendLine($"Fim do teste. Erros: {errors}. Estado final: {game.State}. Pontos: {game.Player.Score}. Nível: {game.Player.Level}.");
             File.WriteAllText(Path.Combine(outDir, "autotest_log.txt"), log.ToString());
-            Application.Quit();
+            Application.Quit(errors == 0 ? 0 : 1);
         }
 
         IEnumerator Shot(string name)

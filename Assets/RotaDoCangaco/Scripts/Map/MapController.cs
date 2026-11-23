@@ -18,6 +18,7 @@ namespace RotaDoCangaco
         public Vector2Int PlayerPos { get; private set; }
         public Vector2Int PreviousPos { get; private set; }
         public Texture2D MapTexture { get; private set; }
+        public MapPhase Phase { get; private set; }
         public bool Overview { get; private set; }
         public readonly List<MapEntity> Entities = new List<MapEntity>();
 
@@ -29,6 +30,7 @@ namespace RotaDoCangaco
         GameManager game;
         char[,] terrain;
         Transform worldRoot;
+        Sprite mapSprite;
         Transform player;
         SpriteRenderer playerSprite;
         HeroAnimator heroAnim;
@@ -59,22 +61,23 @@ namespace RotaDoCangaco
 
         // ------------------------------------------------------------------ Construção
 
-        public void Build(GameManager gameManager)
+        public void Build(GameManager gameManager, MapPhase phase)
         {
             game = gameManager;
             Clear();
             cam = Camera.main;
 
-            Width = MapData.Width;
-            Height = MapData.Height;
+            Phase = phase;
+            Width = phase.Width;
+            Height = phase.Height;
             terrain = new char[Width, Height];
             var entityChars = new List<(char ch, Vector2Int pos)>();
 
             for (int y = 0; y < Height; y++)
             for (int x = 0; x < Width; x++)
             {
-                char ch = MapData.Layout[y][x];
-                if ("#.,~=W_T".IndexOf(ch) >= 0) terrain[x, y] = ch;
+                char ch = phase.Layout[y][x];
+                if (MapData.TerrainTiles.IndexOf(ch) >= 0) terrain[x, y] = ch;
                 else
                 {
                     terrain[x, y] = '?';
@@ -86,11 +89,14 @@ namespace RotaDoCangaco
             worldRoot = new GameObject("Mundo").transform;
             worldRoot.SetParent(transform, false);
 
-            MapTexture = MapPainter.Paint(terrain, 12345, layout: MapData.Layout);
+            MapTexture = phase == SertaoMap.Phase
+                ? MapPainter.PaintSertao(terrain, 8721, phase.Layout)
+                : MapPainter.Paint(terrain, 12345, layout: phase.Layout);
             var mapGo = new GameObject("Terreno");
             mapGo.transform.SetParent(worldRoot, false);
             var mapSr = mapGo.AddComponent<SpriteRenderer>();
-            mapSr.sprite = Sprite.Create(MapTexture, new Rect(0, 0, MapTexture.width, MapTexture.height), Vector2.zero, MapPainter.TilePx);
+            mapSprite = Sprite.Create(MapTexture, new Rect(0, 0, MapTexture.width, MapTexture.height), Vector2.zero, MapPainter.TilePx);
+            mapSr.sprite = mapSprite;
             mapSr.sortingOrder = -1000;
 
             foreach (var (ch, pos) in entityChars) CreateEntity(ch, pos);
@@ -107,11 +113,19 @@ namespace RotaDoCangaco
         {
             StopAllCoroutines();
             moving = false;
+            jumping = false;
+            stepCount = 0;
             path.Clear();
             Entities.Clear();
             fireflies.Clear();
             fireflyBase.Clear();
-            if (worldRoot != null) Destroy(worldRoot.gameObject);
+            if (worldRoot != null)
+            {
+                worldRoot.gameObject.SetActive(false);
+                Destroy(worldRoot.gameObject);
+            }
+            if (mapSprite != null) Destroy(mapSprite);
+            if (MapTexture != null) Destroy(MapTexture);
             worldRoot = null;
             terrain = null;
         }
@@ -134,8 +148,8 @@ namespace RotaDoCangaco
             switch (ch)
             {
                 case 'P': PlayerPos = PreviousPos = pos; break;
-                case 'B': Entities.Add(new BossEntity(ch, MapData.Encounters[ch], pos)); break;
-                case 'X': Entities.Add(new ExitEntity(pos)); break;
+                case 'B': Entities.Add(new BossEntity(ch, Phase.Encounters[ch], pos)); break;
+                case 'X': Entities.Add(new ExitEntity(pos, Phase == SertaoMap.Phase ? "Saída do lajedo" : "Porteira para o Sertão")); break;
                 case 'C': Entities.Add(new ChestEntity(ChestKind.Card, pos)); break;
                 case 'R': Entities.Add(new ChestEntity(ChestKind.Relic, pos)); break;
                 case 'H': Entities.Add(new ChestEntity(ChestKind.Heal, pos)); break;
@@ -143,7 +157,7 @@ namespace RotaDoCangaco
                 case 'F': Entities.Add(new CampfireEntity(pos)); break;
                 case 'U': Entities.Add(new CuscuzPotEntity(pos)); break;
                 default:
-                    if (MapData.Encounters.TryGetValue(ch, out var data)) Entities.Add(new EncounterEntity(ch, data, pos));
+                    if (Phase.Encounters.TryGetValue(ch, out var data)) Entities.Add(new EncounterEntity(ch, data, pos));
                     else Debug.LogWarning($"[RotaDoCangaco] Caractere desconhecido no mapa: '{ch}' em {pos}");
                     break;
             }

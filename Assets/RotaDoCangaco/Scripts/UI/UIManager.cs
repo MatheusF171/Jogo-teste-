@@ -143,7 +143,7 @@ namespace RotaDoCangaco
 
             string left =
                 "<b><color=#FFC845>EXPLORAÇÃO</color></b>\n" +
-                "• Ande pelo canavial com <b>WASD/Setas</b> ou <b>clicando</b> no destino.\n" +
+                "• Ande com <b>WASD/Setas</b> ou <b>clicando</b> no destino.\n" +
                 "• O mapa mostra tudo desde o início: monstros, baús, cordéis, fogueiras e o chefe. Planeje a rota! (<b>M</b> mostra o mapa inteiro)\n" +
                 "• Morcegos e urubus <b>rondam</b> e perseguem você quando chega perto.\n" +
                 "• <b>Cordel</b>: responda perguntas sobre a cultura da região e ganhe pontos.\n" +
@@ -152,7 +152,7 @@ namespace RotaDoCangaco
                 "• <b>Panela de cuscuz</b> (ao lado das fogueiras): cada porção dá um bônus permanente, mas comer demais deixa você pesado: menos energia e menos cartas por turno. Vencer batalhas faz digerir.\n\n" +
                 "<b><color=#FFC845>VIDAS E VITÓRIA</color></b>\n" +
                 $"• Você começa com {GameConfig.StartLives} vidas. Perder uma batalha custa 1 vida.\n" +
-                $"• Derrote a <b>Mula Sem Cabeça</b>, ganhe sua habilidade e chegue à porteira com pelo menos {GameConfig.MinScoreToWin} pontos.";
+                $"• Derrote a <b>Mula Sem Cabeça</b> e chegue à porteira com {GameConfig.MinScoreToWin} pontos. No Sertão, vença o <b>Saci</b> e saia do lajedo.";
             string right =
                 "<b><color=#FFC845>BATALHA COM CARTAS</color></b>\n" +
                 $"• Todo turno você recebe <b>{GameConfig.StartEnergy} de energia</b> e compra uma mão. Cada carta custa energia.\n" +
@@ -429,19 +429,19 @@ namespace RotaDoCangaco
             ((RectTransform)stop.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 75), new Vector2(320, 70));
         }
 
-        /// <summary>Recompensa do chefe: a arte da Mula e a nova carta de habilidade.</summary>
-        public void ShowBossReward(CardData card, Action onContinue)
+        /// <summary>Retrato do chefe e carta conquistada.</summary>
+        public void ShowBossReward(CardData card, string bossName, string spriteKey, Action onContinue)
         {
             var root = OpenOverlay("RecompensaChefe", 0.85f);
             var glow = UIFactory.Image(root, "Brilho", TextureFactory.Glow, new Color(1f, 0.3f, 0.5f, 0.6f), false);
             glow.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(1300, 900));
 
-            var t = UIFactory.Text(root, "Titulo", "A MULA SEM CABEÇA FOI DERROTADA!", 58, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var t = UIFactory.Text(root, "Titulo", $"VITÓRIA CONTRA {bossName.ToUpperInvariant()}!", 58, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
             t.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -100), new Vector2(1600, 80));
-            var s = UIFactory.Text(root, "Sub", "As chamas da maldição agora obedecem a você. <b>Nova habilidade adicionada ao baralho:</b>", 28, Color.white);
+            var s = UIFactory.Text(root, "Sub", "Você ganhou uma nova carta de habilidade.", 28, Color.white);
             s.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -170), new Vector2(1500, 50));
 
-            var boss = UIFactory.Image(root, "Chefe", SpriteLibrary.Get("mula_carta"));
+            var boss = UIFactory.Image(root, "Chefe", SpriteLibrary.Get(spriteKey));
             boss.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-260, -40), new Vector2(390, 525));
             var view = CardView.Create(root, card);
             var rt = (RectTransform)view.transform;
@@ -463,7 +463,7 @@ namespace RotaDoCangaco
         {
             HideAll();
             var root = OpenOverlay(victory ? "Vitoria" : "Derrota", 0.92f);
-            var image = UIFactory.Image(root, "Imagem", victory ? HeroAnimator.Frame(1) : SpriteLibrary.Get("mula_carta"));
+            var image = UIFactory.Image(root, "Imagem", victory ? HeroAnimator.Frame(1) : HeroAnimator.Frame(6));
             image.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-480, 0), victory ? new Vector2(360, 360) : new Vector2(330, 444));
             if (victory)
             {
@@ -476,8 +476,8 @@ namespace RotaDoCangaco
                                    80, victory ? UIFactory.Accent : new Color(1f, 0.35f, 0.35f), TextAnchor.MiddleCenter, FontStyle.Bold);
             t.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(200, 300), new Vector2(1100, 110));
             string sub = victory
-                ? "O Canavial Assombrado está livre. A Rota do Cangaço segue para o Sertão..."
-                : "Suas vidas acabaram. A Mula Sem Cabeça continua galopando pelo canavial.";
+                ? "Você atravessou o Canavial Assombrado e venceu o Saci no Sertão."
+                : "Suas vidas acabaram durante a viagem.";
             var s = UIFactory.Text(root, "Sub", sub, 28, Color.white);
             s.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(200, 210), new Vector2(1000, 80));
             var st = UIFactory.Text(root, "Estatisticas", stats, 28, Color.white, TextAnchor.UpperLeft);

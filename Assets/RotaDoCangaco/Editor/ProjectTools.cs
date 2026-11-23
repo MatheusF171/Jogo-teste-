@@ -88,31 +88,35 @@ namespace RotaDoCangaco.EditorTools
         {
             var sb = new StringBuilder();
             sb.AppendLine("===== VALIDAÇÃO =====");
-            sb.Append(ValidateContent());
+            sb.Append(ValidateContent(MapData.Canavial));
+            sb.Append(ValidateContent(SertaoMap.Phase));
             sb.AppendLine("===== SIMULAÇÃO (IA simples, escolhas de carta aleatórias) =====");
             sb.Append(RunScenario("Só o caminho obrigatório", new[] { "a", "c", "e", "f", "h", "i", "F", "j", "B" }, 300));
             sb.Append(RunScenario("Explorando tudo (2 cuscuz por panela)", new[] { "a", "b", "d", "C", "c", "F", "U2", "H", "l", "e", "f", "g", "R", "k", "C", "h", "i", "F", "U2", "j", "B" }, 300));
             sb.Append(RunScenario("Comilão (4 cuscuz por panela, logo antes do chefe)", new[] { "a", "b", "d", "C", "c", "F", "U4", "H", "l", "e", "f", "g", "R", "k", "C", "h", "i", "j", "F", "U4", "B" }, 300));
             Debug.Log("[RotaDoCangaco]\n" + sb);
+            Directory.CreateDirectory("Logs");
             File.WriteAllText("Logs/simulacao.txt", sb.ToString());
         }
 
-        static string ValidateContent()
+        static string ValidateContent(MapPhase phase)
         {
             var sb = new StringBuilder();
-            int w = MapData.Width, h = MapData.Height;
+            int w = phase.Width, h = phase.Height;
+            sb.AppendLine(phase.Title);
             for (int y = 0; y < h; y++)
-                if (MapData.Layout[y].Length != w) sb.AppendLine($"ERRO: linha {y} tem {MapData.Layout[y].Length} colunas (esperado {w})");
+                if (phase.Layout[y].Length != w)
+                    return $"ERRO: linha {y} tem {phase.Layout[y].Length} colunas (esperado {w})\n";
 
             Vector2Int start = Vector2Int.zero;
             var targets = new List<(char, Vector2Int)>();
             for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
-                char c = MapData.Layout[y][x];
+                char c = phase.Layout[y][x];
                 if (c == 'P') start = new Vector2Int(x, y);
-                else if ("#.,~=W_T".IndexOf(c) < 0) targets.Add((c, new Vector2Int(x, y)));
-                if (char.IsLower(c) && !MapData.Encounters.ContainsKey(c)) sb.AppendLine($"ERRO: encontro '{c}' sem definição");
+                else if (MapData.TerrainTiles.IndexOf(c) < 0) targets.Add((c, new Vector2Int(x, y)));
+                if ((c == 'B' || char.IsLower(c)) && !phase.Encounters.ContainsKey(c)) sb.AppendLine($"ERRO: encontro '{c}' sem definição");
             }
 
             // BFS ignorando objetos (todos os objetos são pisáveis)
@@ -127,7 +131,7 @@ namespace RotaDoCangaco.EditorTools
                 {
                     var n = cur + d;
                     if (n.x < 0 || n.y < 0 || n.x >= w || n.y >= h || seen.Contains(n)) continue;
-                    if (MapPainter.IsSolid(MapData.Layout[n.y][n.x])) continue;
+                    if (MapPainter.IsSolid(phase.Layout[n.y][n.x])) continue;
                     seen.Add(n);
                     queue.Enqueue(n);
                 }
@@ -137,7 +141,7 @@ namespace RotaDoCangaco.EditorTools
 
             var spriteKeys = new HashSet<string> { "heroi", "mula_retrato", "mula_carta", "mula_arte", "chefes_do_folclore" };
             for (int i = 1; i <= 8; i++) spriteKeys.Add("heroi_f" + i);
-            foreach (var enc in MapData.Encounters.Values)
+            foreach (var enc in phase.Encounters.Values)
                 foreach (var e in enc.Enemies) spriteKeys.Add(EnemyDatabase.Get(e.Key).SpriteKey);
             foreach (var key in spriteKeys)
             {

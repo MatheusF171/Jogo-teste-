@@ -11,7 +11,7 @@ namespace RotaDoCangaco
         public const int TilePx = 32;
         static readonly Color NightTint = new Color(0.74f, 0.8f, 0.97f);
 
-        public static bool IsSolid(char t) => t == '#' || t == '~' || t == 'W' || t == 'T';
+        public static bool IsSolid(char t) => t == '#' || t == '~' || t == 'W' || t == 'T' || t == 'K';
 
         /// <param name="terrain">Grade [x, y] com y = 0 na linha de cima, já sem os objetos.</param>
         public static Texture2D Paint(char[,] terrain, int seed, bool night = true, string[] layout = null)
@@ -45,6 +45,98 @@ namespace RotaDoCangaco
             if (night) c.Multiply(NightTint);
             if (exploration) PaintLandmarks(c, terrain, layout);
             return c.ToTexture(FilterMode.Bilinear);
+        }
+
+        public static Texture2D PaintSertao(char[,] terrain, int seed, string[] layout = null)
+        {
+            int width = terrain.GetLength(0), height = terrain.GetLength(1);
+            var c = new PixelCanvas(width * TilePx, height * TilePx, Color.black);
+            var stone = Hex("#514041");
+            var ochre = Hex("#BC8454");
+            var sand = Hex("#9B6748");
+            var water = Hex("#23626D");
+            var yard = Hex("#A08B78");
+
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                char tile = terrain[x, y];
+                var ground = tile == '#' ? Color.Lerp(stone, Hex("#684B46"), Hash(x / 2, y / 2, seed) * 0.7f)
+                    : tile == 'W' ? stone : tile == '~' ? water
+                    : tile == '_' ? yard : tile == '.' ? ochre : sand;
+                FillNoise(c, x * TilePx, (height - 1 - y) * TilePx, ground, 0.16f, seed);
+            }
+
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int left = x * TilePx, bottom = (height - 1 - y) * TilePx;
+                float cx = left + 16, cy = bottom + 16;
+                char tile = terrain[x, y];
+                var rng = new System.Random(seed + x * 131 + y * 977);
+                if (!IsSolid(tile)) PaintEdgeShadows(c, terrain, x, y, width, height);
+
+                switch (tile)
+                {
+                    case '#':
+                        bool cliffEdge = (x > 0 && terrain[x - 1, y] != '#')
+                            || (x + 1 < width && terrain[x + 1, y] != '#')
+                            || (y > 0 && terrain[x, y - 1] != '#')
+                            || (y + 1 < height && terrain[x, y + 1] != '#');
+                        if (cliffEdge)
+                        {
+                            c.Ellipse(cx, cy, 17, 13, Hex("#765649"), rng.Next(-28, 29));
+                            c.Capsule(cx - 10, cy + 4, cx + 8, cy + 8, 0.9f, Hex("#927061"));
+                        }
+                        else if (rng.NextDouble() < 0.45)
+                            c.Capsule(left, cy, left + 30, cy + rng.Next(-12, 13), 1.4f, Hex("#5D4543"));
+                        break;
+                    case 'W':
+                        var ridge = Color.Lerp(Hex("#6E4F45"), Hex("#866050"), Hash(x, y, seed));
+                        c.RoundRect(left + 1, bottom + 4, left + 31, bottom + 30, 5, ridge);
+                        c.Capsule(left + 5, bottom + 26, left + 26, bottom + 27, 1, Hex("#967061"));
+                        c.Capsule(cx - 3, cy + 8, cx + 3, cy - 7, 0.75f, stone);
+                        break;
+                    case 'K':
+                        PaintMandacaru(c, cx, cy);
+                        break;
+                    case 'T':
+                        PaintTree(c, left, bottom, rng);
+                        break;
+                    case '~':
+                        c.Capsule(cx - 11, cy + rng.Next(-8, 8), cx + 8, cy, 0.8f, Hex("#387E81"));
+                        break;
+                    case '_':
+                        c.Rect(left, bottom, left + TilePx, bottom + 1, Hex("#827367"));
+                        c.Rect(left, bottom, left + 1, bottom + TilePx, Hex("#827367"));
+                        break;
+                    default:
+                        for (int i = 0; i < 5; i++)
+                        {
+                            float px = left + rng.Next(4, 28), py = bottom + rng.Next(4, 28);
+                            c.Capsule(px, py, px + rng.Next(1, 5), py + 1, 0.7f,
+                                tile == ',' ? Hex("#777045") : Hex("#D8A473"));
+                        }
+                        break;
+                }
+            }
+
+            c.Multiply(new Color(1f, 0.87f, 0.89f));
+            if (layout != null) PaintLandmarks(c, terrain, layout);
+            return c.ToTexture(FilterMode.Bilinear);
+        }
+
+        static void PaintMandacaru(PixelCanvas c, float x, float y)
+        {
+            var green = Hex("#4E794C");
+            c.Ellipse(x + 2, y - 8, 12, 5, new Color(0.14f, 0.1f, 0.08f, 0.5f));
+            c.Capsule(x, y - 9, x, y + 11, 3.5f, green);
+            c.Capsule(x - 8, y - 1, x - 8, y + 6, 2.4f, green);
+            c.Capsule(x - 8, y - 1, x, y - 1, 2.3f, green);
+            c.Capsule(x + 8, y + 1, x + 8, y + 8, 2.4f, green);
+            c.Capsule(x, y + 1, x + 8, y + 1, 2.3f, green);
+            c.Capsule(x - 1, y - 7, x - 1, y + 10, 0.8f, Hex("#83A867"));
+            c.Circle(x, y + 13, 1.9f, Hex("#F2BF80"));
         }
 
         static void PaintLandmarks(PixelCanvas c, char[,] terrain, string[] layout)
@@ -244,7 +336,7 @@ namespace RotaDoCangaco
         // ------------------------------------------------------------------ Arena de batalha
 
         /// <summary>Clareira cercada de cana (ou o pátio do engenho, na luta contra o chefe).</summary>
-        public static Texture2D PaintArena(bool engenho, int seed)
+        public static Texture2D PaintArena(bool engenho, int seed, bool sertao = false)
         {
             const int w = 30, h = 17;
             var grid = new char[w, h];
@@ -261,7 +353,7 @@ namespace RotaDoCangaco
                 for (int y = 2; y < h; y++)
                 for (int x = 12; x <= 17; x++)
                     grid[x, y] = '.';
-            return Paint(grid, seed, true);
+            return sertao ? PaintSertao(grid, seed) : Paint(grid, seed, true);
         }
     }
 }
