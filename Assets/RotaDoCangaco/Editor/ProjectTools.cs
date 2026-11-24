@@ -69,16 +69,81 @@ namespace RotaDoCangaco.EditorTools
         public static void BuildWindows()
         {
             if (!File.Exists(ScenePath)) Setup();
+            ApplyIcon();
+            ApplySizeSettings();
+            // Em modo batch dá para escolher a pasta: -buildPath "C:\pasta\RotaDoCangaco.exe"
+            string path = CommandLineValue("-buildPath") ?? BuildPath;
             var options = new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
-                locationPathName = BuildPath,
+                locationPathName = path,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
             };
             var report = BuildPipeline.BuildPlayer(options);
-            Debug.Log($"[RotaDoCangaco] Build: {report.summary.result} ({report.summary.totalSize / (1024 * 1024)} MB) em {BuildPath}");
+            if (report.summary.result == BuildResult.Succeeded) RemoveOptionalFiles(path);
+            Debug.Log($"[RotaDoCangaco] Build: {report.summary.result} ({report.summary.totalSize / (1024 * 1024)} MB) em {path}");
             if (Application.isBatchMode && report.summary.result != BuildResult.Succeeded) EditorApplication.Exit(1);
+        }
+
+        const string IconPath = "Assets/RotaDoCangaco/Arte/icone.png";
+
+        /// <summary>Ícone do executável (o herói no pôr do sol). Importado sem compressão para não borrar.</summary>
+        static void ApplyIcon()
+        {
+            if (AssetImporter.GetAtPath(IconPath) is TextureImporter importer &&
+                (importer.textureCompression != TextureImporterCompression.Uncompressed || importer.mipmapEnabled ||
+                 importer.npotScale != TextureImporterNPOTScale.None))
+            {
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.mipmapEnabled = false;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
+            if (icon == null)
+            {
+                Debug.LogWarning($"[RotaDoCangaco] Ícone não encontrado em {IconPath}; o executável fica com o ícone padrão.");
+                return;
+            }
+            PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
+        }
+
+        /// <summary>
+        /// Deixa o executável menor: remove do build o código .NET que o jogo não usa (stripping alto)
+        /// e usa só o Direct3D 11 (dispensa a pasta D3D12 de ~4,5 MB; o jogo é 2D e não precisa do 12).
+        /// </summary>
+        static void ApplySizeSettings()
+        {
+            PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.Standalone, ManagedStrippingLevel.High);
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
+                new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
+        }
+
+        /// <summary>
+        /// Tira do build o que o jogo não precisa para rodar (testado com o teste automático completo):
+        /// - pasta D3D12 (Agility SDK, ~4,5 MB): só é carregada com Direct3D 12, e o build usa só o 11;
+        /// - UnityCrashHandler64.exe (~1,7 MB): só grava relatórios quando o jogo trava; sem ele o jogo roda igual.
+        /// As DLLs dstorage ficam: o UnityPlayer.dll não abre sem elas.
+        /// </summary>
+        static void RemoveOptionalFiles(string exePath)
+        {
+            string root = Path.GetDirectoryName(Path.GetFullPath(exePath));
+            var apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.StandaloneWindows64);
+            string d3d12 = Path.Combine(root, "D3D12");
+            if (System.Array.IndexOf(apis, UnityEngine.Rendering.GraphicsDeviceType.Direct3D12) < 0 && Directory.Exists(d3d12))
+                Directory.Delete(d3d12, true);
+            string crashHandler = Path.Combine(root, "UnityCrashHandler64.exe");
+            if (File.Exists(crashHandler)) File.Delete(crashHandler);
+        }
+
+        static string CommandLineValue(string name)
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            int i = System.Array.IndexOf(args, name);
+            return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
         }
 
         // ------------------------------------------------------------------ Validação e simulação
@@ -88,12 +153,12 @@ namespace RotaDoCangaco.EditorTools
         {
             var sb = new StringBuilder();
             sb.AppendLine("===== VALIDAÇÃO =====");
-            sb.Append(ValidateContent(MapData.Canavial));
             sb.Append(ValidateContent(SertaoMap.Phase));
             sb.AppendLine("===== SIMULAÇÃO (IA simples, escolhas de carta aleatórias) =====");
-            sb.Append(RunScenario("Só o caminho obrigatório", new[] { "a", "c", "e", "f", "h", "i", "F", "j", "B" }, 300));
-            sb.Append(RunScenario("Explorando tudo (2 cuscuz por panela)", new[] { "a", "b", "d", "C", "c", "F", "U2", "H", "l", "e", "f", "g", "R", "k", "C", "h", "i", "F", "U2", "j", "B" }, 300));
-            sb.Append(RunScenario("Comilão (4 cuscuz por panela, logo antes do chefe)", new[] { "a", "b", "d", "C", "c", "F", "U4", "H", "l", "e", "f", "g", "R", "k", "C", "h", "i", "j", "F", "U4", "B" }, 300));
+            sb.Append(RunScenario("Só o caminho obrigatório (ponte do açude)", new[] { "a", "c", "F", "e", "i", "F", "j", "B" }, 300));
+            sb.Append(RunScenario("Rota da serra (sem a ponte)", new[] { "a", "f", "F", "b", "C", "g", "R", "h", "k", "H", "F", "j", "B" }, 300));
+            sb.Append(RunScenario("Explorando tudo (2 cuscuz por panela)", new[] { "a", "c", "d", "l", "C", "F", "U2", "f", "b", "C", "g", "R", "h", "k", "H", "i", "e", "F", "U2", "j", "B" }, 300));
+            sb.Append(RunScenario("Comilão (4 cuscuz por panela, logo antes do chefe)", new[] { "a", "c", "d", "l", "C", "F", "U4", "f", "b", "C", "g", "R", "h", "k", "H", "i", "e", "j", "F", "U4", "B" }, 300));
             Debug.Log("[RotaDoCangaco]\n" + sb);
             Directory.CreateDirectory("Logs");
             File.WriteAllText("Logs/simulacao.txt", sb.ToString());
@@ -139,14 +204,16 @@ namespace RotaDoCangaco.EditorTools
             foreach (var (c, pos) in targets)
                 if (!seen.Contains(pos)) sb.AppendLine($"ERRO: objeto '{c}' em {pos} é inalcançável");
 
-            var spriteKeys = new HashSet<string> { "heroi", "mula_retrato", "mula_carta", "mula_arte", "chefes_do_folclore" };
+            var spriteKeys = new HashSet<string> { "heroi", "menu_fundo", "logo_titulo" };
             for (int i = 1; i <= 8; i++) spriteKeys.Add("heroi_f" + i);
             foreach (var enc in phase.Encounters.Values)
                 foreach (var e in enc.Enemies) spriteKeys.Add(EnemyDatabase.Get(e.Key).SpriteKey);
             foreach (var key in spriteKeys)
             {
                 var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/RotaDoCangaco/Resources/Sprites/{key}.png");
-                if (sprite == null) sb.AppendLine($"ERRO: sprite '{key}' não encontrado ou não importado como Sprite");
+                if (sprite == null) sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/RotaDoCangaco/Resources/Sprites/{key}.jpg");
+                bool asBytes = AssetDatabase.LoadAssetAtPath<TextAsset>($"Assets/RotaDoCangaco/Resources/Sprites/{key}.bytes") != null;
+                if (sprite == null && !asBytes) sb.AppendLine($"ERRO: sprite '{key}' não encontrado ou não importado como Sprite");
             }
             sb.AppendLine($"Mapa {w}x{h}, {targets.Count} objetos, {seen.Count} tiles alcançáveis, {CardDatabase.All.Count()} cartas.");
             return sb.ToString();
@@ -154,7 +221,7 @@ namespace RotaDoCangaco.EditorTools
 
         static string RunScenario(string title, string[] route, int runs)
         {
-            int wins = 0, totalLivesLost = 0, totalBossTurns = 0, bossFights = 0;
+            int wins = 0, totalLivesLost = 0, totalBossTurns = 0, bossFights = 0, scoreAtWin = 0, belowGoal = 0;
             float levelAtBoss = 0, hpAtBoss = 0, maxHpAtBoss = 0, deckAtBoss = 0, pesoAtBoss = 0;
             var defeatsAt = new Dictionary<string, int>();
 
@@ -176,15 +243,16 @@ namespace RotaDoCangaco.EditorTools
                     switch (step)
                     {
                         case "F": p.Heal(Mathf.CeilToInt(p.MaxHp * 0.5f)); continue;
-                        case "H": p.MaxHp += 5; p.Heal(20); continue;
-                        case "R": p.EnergyPerTurn++; continue;
+                        case "H": p.MaxHp += 5; p.Heal(20); p.Score += GameConfig.ChestScore; continue;
+                        case "R": p.EnergyPerTurn++; p.Score += GameConfig.ChestScore; continue;
                         case "C":
                             var rare = CardDatabase.RollChoices(rng, 3, true);
                             p.Deck.Add(rare[rng.Next(rare.Count)]);
+                            p.Score += GameConfig.ChestScore;
                             continue;
                     }
 
-                    var enc = MapData.Encounters[step[0]];
+                    var enc = SertaoMap.Encounters[step[0]];
                     if (step == "B")
                     {
                         levelAtBoss += p.Level;
@@ -204,7 +272,12 @@ namespace RotaDoCangaco.EditorTools
                         if (p.Lives <= 0) { dead = true; break; }
                         p.Hp = p.MaxHp;
                     }
-                    if (step == "B" && !dead) wins++;
+                    if (step == "B" && !dead)
+                    {
+                        wins++;
+                        scoreAtWin += p.Score;
+                        if (p.Score < GameConfig.MinScoreToWin) belowGoal++;
+                    }
                 }
             }
 
@@ -213,6 +286,7 @@ namespace RotaDoCangaco.EditorTools
             sb.AppendLine($"Vitórias contra o chefe: {wins * 100f / runs:0.0}%  ·  Vidas perdidas (média): {totalLivesLost / (float)runs:0.00}");
             sb.AppendLine($"Ao chegar no chefe: nível {levelAtBoss / runs:0.0}, vida {hpAtBoss / runs:0}/{maxHpAtBoss / runs:0}, baralho {deckAtBoss / runs:0.0} cartas, peso {pesoAtBoss / runs:0.0}");
             sb.AppendLine($"Turnos por luta com o chefe: {(bossFights > 0 ? totalBossTurns / (float)bossFights : 0):0.0}");
+            sb.AppendLine($"Pontos ao vencer o chefe (sem cordéis): {(wins > 0 ? scoreAtWin / wins : 0)}  ·  abaixo da meta de {GameConfig.MinScoreToWin}: {belowGoal}");
             sb.AppendLine("Derrotas por encontro: " + string.Join(", ", defeatsAt.OrderBy(k => k.Key).Select(k => $"{k.Key}={k.Value}")));
             return sb.ToString();
         }

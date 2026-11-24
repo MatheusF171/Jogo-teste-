@@ -89,9 +89,7 @@ namespace RotaDoCangaco
             worldRoot = new GameObject("Mundo").transform;
             worldRoot.SetParent(transform, false);
 
-            MapTexture = phase == SertaoMap.Phase
-                ? MapPainter.PaintSertao(terrain, 8721, phase.Layout)
-                : MapPainter.Paint(terrain, 12345, layout: phase.Layout);
+            MapTexture = MapPainter.PaintSertao(terrain, 8721, phase.Layout);
             var mapGo = new GameObject("Terreno");
             mapGo.transform.SetParent(worldRoot, false);
             var mapSr = mapGo.AddComponent<SpriteRenderer>();
@@ -149,7 +147,7 @@ namespace RotaDoCangaco
             {
                 case 'P': PlayerPos = PreviousPos = pos; break;
                 case 'B': Entities.Add(new BossEntity(ch, Phase.Encounters[ch], pos)); break;
-                case 'X': Entities.Add(new ExitEntity(pos, Phase == SertaoMap.Phase ? "Saída do lajedo" : "Porteira para o Sertão")); break;
+                case 'X': Entities.Add(new ExitEntity(pos, "Saída do lajedo")); break;
                 case 'C': Entities.Add(new ChestEntity(ChestKind.Card, pos)); break;
                 case 'R': Entities.Add(new ChestEntity(ChestKind.Relic, pos)); break;
                 case 'H': Entities.Add(new ChestEntity(ChestKind.Heal, pos)); break;

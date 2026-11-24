@@ -64,7 +64,6 @@ namespace RotaDoCangaco
 
         public override string Tooltip => $"<b>CHEFE: {Data.Leader.Name}</b> — {Data.Title}";
         public override Color MinimapColor => new Color(1f, 0.2f, 0.6f);
-        public override Sprite Sprite => SpriteLibrary.Get(Data.Leader.Id == "mula" ? "mula_retrato" : Data.Leader.SpriteKey);
         public override float SpriteSize => 1.7f;
         public override Color GlowColor => new Color(1f, 0.25f, 0.35f, 0.45f);
 
@@ -93,7 +92,7 @@ namespace RotaDoCangaco
                 if (Opened) return "Baú vazio.";
                 switch (Kind)
                 {
-                    case ChestKind.Card: return "<b>Baú do Canavial</b>: contém uma carta rara.";
+                    case ChestKind.Card: return "<b>Baú do Sertão</b>: contém uma carta rara.";
                     case ChestKind.Relic: return "<b>Baú Antigo</b>: guarda uma relíquia poderosa.";
                     default: return "<b>Baú da Benzedeira</b>: remédios para a viagem.";
                 }

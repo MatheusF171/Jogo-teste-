@@ -3,50 +3,17 @@ using UnityEngine;
 namespace RotaDoCangaco
 {
     /// <summary>
-    /// Pinta o mapa visto de cima, tile por tile, numa única textura: canavial denso, trilhas de terra,
-    /// clareiras, rio, ponte e o velho engenho de tijolos. Tudo com tom noturno (a Mula só aparece à noite).
+    /// Pinta o mapa do Sertão visto de cima, tile por tile, numa única textura: rochas, trilhas de terra,
+    /// chão de caatinga, mandacarus, o açude com sua ponte e o lajedo de pedra do Saci.
     /// </summary>
     public static class MapPainter
     {
         public const int TilePx = 32;
-        static readonly Color NightTint = new Color(0.74f, 0.8f, 0.97f);
 
         public static bool IsSolid(char t) => t == '#' || t == '~' || t == 'W' || t == 'T' || t == 'K';
 
         /// <param name="terrain">Grade [x, y] com y = 0 na linha de cima, já sem os objetos.</param>
-        public static Texture2D Paint(char[,] terrain, int seed, bool night = true, string[] layout = null)
-        {
-            int w = terrain.GetLength(0), h = terrain.GetLength(1);
-            var c = new PixelCanvas(w * TilePx, h * TilePx, Color.black);
-            bool exploration = layout != null;
-
-            for (int ty = 0; ty < h; ty++)
-            for (int tx = 0; tx < w; tx++)
-                PaintGround(c, terrain[tx, ty], tx * TilePx, (h - 1 - ty) * TilePx, tx, ty, seed, exploration);
-
-            for (int ty = 0; ty < h; ty++)
-            for (int tx = 0; tx < w; tx++)
-            {
-                char t = terrain[tx, ty];
-                if (IsSolid(t) && t != 'T') continue;
-                PaintEdgeShadows(c, terrain, tx, ty, w, h);
-            }
-
-            for (int ty = 0; ty < h; ty++)
-            for (int tx = 0; tx < w; tx++)
-            {
-                char t = terrain[tx, ty];
-                int ox = tx * TilePx, oy = (h - 1 - ty) * TilePx;
-                var rng = new System.Random(seed * 7919 + tx * 131 + ty * 977);
-                if (t == '#') PaintCane(c, ox, oy, rng, exploration);
-                else if (t == 'T') PaintTree(c, ox, oy, rng);
-            }
-
-            if (night) c.Multiply(NightTint);
-            if (exploration) PaintLandmarks(c, terrain, layout);
-            return c.ToTexture(FilterMode.Bilinear);
-        }
-
+        /// <param name="layout">Layout original (com objetos), para desenhar fogueiras, tochas e margens.</param>
         public static Texture2D PaintSertao(char[,] terrain, int seed, string[] layout = null)
         {
             int width = terrain.GetLength(0), height = terrain.GetLength(1);
@@ -62,7 +29,7 @@ namespace RotaDoCangaco
             {
                 char tile = terrain[x, y];
                 var ground = tile == '#' ? Color.Lerp(stone, Hex("#684B46"), Hash(x / 2, y / 2, seed) * 0.7f)
-                    : tile == 'W' ? stone : tile == '~' ? water
+                    : tile == 'W' ? stone : tile == '~' || tile == '=' ? water
                     : tile == '_' ? yard : tile == '.' ? ochre : sand;
                 FillNoise(c, x * TilePx, (height - 1 - y) * TilePx, ground, 0.16f, seed);
             }
@@ -106,6 +73,9 @@ namespace RotaDoCangaco
                     case '~':
                         c.Capsule(cx - 11, cy + rng.Next(-8, 8), cx + 8, cy, 0.8f, Hex("#387E81"));
                         break;
+                    case '=':
+                        PaintBridge(c, terrain, x, y, left, bottom, rng);
+                        break;
                     case '_':
                         c.Rect(left, bottom, left + TilePx, bottom + 1, Hex("#827367"));
                         c.Rect(left, bottom, left + 1, bottom + TilePx, Hex("#827367"));
@@ -124,6 +94,33 @@ namespace RotaDoCangaco
             c.Multiply(new Color(1f, 0.87f, 0.89f));
             if (layout != null) PaintLandmarks(c, terrain, layout);
             return c.ToTexture(FilterMode.Bilinear);
+        }
+
+        /// <summary>Ponte de tábuas com corrimão; as tábuas ficam atravessadas no sentido da travessia.</summary>
+        static void PaintBridge(PixelCanvas c, char[,] terrain, int x, int y, int left, int bottom, System.Random rng)
+        {
+            int width = terrain.GetLength(0), height = terrain.GetLength(1);
+            bool Water(int tx, int ty) => tx < 0 || ty < 0 || tx >= width || ty >= height || terrain[tx, ty] == '~';
+            bool vertical = Water(x - 1, y) && Water(x + 1, y);
+            var plank = Hex("#8B5E34");
+            var rail = Hex("#5A3A1E");
+            for (int p = 0; p < TilePx; p += 6)
+            {
+                float shade = 0.85f + (float)rng.NextDouble() * 0.25f;
+                var col = new Color(plank.r * shade, plank.g * shade, plank.b * shade);
+                if (vertical) c.Rect(left + 3, bottom + p + 1, left + TilePx - 3, bottom + p + 5, col);
+                else c.Rect(left + p + 1, bottom + 3, left + p + 5, bottom + TilePx - 3, col);
+            }
+            if (vertical)
+            {
+                c.Rect(left, bottom, left + 3, bottom + TilePx, rail);
+                c.Rect(left + TilePx - 3, bottom, left + TilePx, bottom + TilePx, rail);
+            }
+            else
+            {
+                c.Rect(left, bottom, left + TilePx, bottom + 3, rail);
+                c.Rect(left, bottom + TilePx - 3, left + TilePx, bottom + TilePx, rail);
+            }
         }
 
         static void PaintMandacaru(PixelCanvas c, float x, float y)
@@ -154,9 +151,10 @@ namespace RotaDoCangaco
 
                 if (terrain[x, y] == '~')
                 {
-                    if (y > 0 && terrain[x, y - 1] != '~')
+                    bool Wet(char t) => t == '~' || t == '=';
+                    if (y > 0 && !Wet(terrain[x, y - 1]))
                         c.Capsule(left, bottom + 29, left + TilePx, bottom + 29, 1.4f, bank);
-                    if (y < height - 1 && terrain[x, y + 1] != '~')
+                    if (y < height - 1 && !Wet(terrain[x, y + 1]))
                         c.Capsule(left, bottom + 3, left + TilePx, bottom + 3, 1.4f, bank);
                 }
 
@@ -201,85 +199,6 @@ namespace RotaDoCangaco
             }
         }
 
-        static void PaintGround(PixelCanvas c, char t, int ox, int oy, int tx, int ty, int seed, bool exploration)
-        {
-            var rng = new System.Random(seed * 31 + tx * 7477 + ty * 3331);
-            switch (t)
-            {
-                case '#':
-                    FillNoise(c, ox, oy, Hex(exploration ? "#182F28" : "#1E4424"), 0.35f, seed);
-                    break;
-
-                case '.':
-                    FillNoise(c, ox, oy, Hex(exploration ? "#A47C55" : "#8A6A44"), 0.22f, seed);
-                    for (int i = 0; i < 4; i++)
-                        c.Circle(ox + (float)rng.NextDouble() * TilePx, oy + (float)rng.NextDouble() * TilePx, 0.8f + (float)rng.NextDouble() * 1.2f,
-                                 rng.NextDouble() < 0.5 ? Hex("#A88A62") : Hex("#6B5034"));
-                    break;
-
-                case ',':
-                case 'T':
-                    FillNoise(c, ox, oy, Hex(exploration ? "#547047" : "#4F6E33"), 0.3f, seed);
-                    for (int i = 0; i < 7; i++)
-                    {
-                        float x = ox + (float)rng.NextDouble() * TilePx, y = oy + (float)rng.NextDouble() * TilePx;
-                        c.Capsule(x, y, x + (float)rng.NextDouble() * 3f - 1.5f, y + 3f + (float)rng.NextDouble() * 3f, 0.7f,
-                                  rng.NextDouble() < 0.5 ? Hex("#6E9244") : Hex("#3E5A28"));
-                    }
-                    if (rng.NextDouble() < 0.15)
-                        c.Circle(ox + 6 + (float)rng.NextDouble() * 20, oy + 6 + (float)rng.NextDouble() * 20, 1.6f, Hex("#E8D36A"));
-                    break;
-
-                case '~':
-                    FillNoise(c, ox, oy, Hex(exploration ? "#246274" : "#1B4E7A"), 0.12f, seed);
-                    for (int i = 0; i < 3; i++)
-                    {
-                        float x = ox + (float)rng.NextDouble() * TilePx, y = oy + (float)rng.NextDouble() * TilePx;
-                        c.Capsule(x, y, x + 6 + (float)rng.NextDouble() * 6, y, 0.8f, new Color(0.55f, 0.75f, 0.95f, 0.45f));
-                    }
-                    break;
-
-                case '=':
-                    FillNoise(c, ox, oy, Hex(exploration ? "#246274" : "#1B4E7A"), 0.12f, seed);
-                    for (int py = 0; py < TilePx; py += 6)
-                    {
-                        float shade = 0.85f + (float)rng.NextDouble() * 0.25f;
-                        var plank = Hex("#8B5E34");
-                        c.Rect(ox + 3, oy + py + 1, ox + TilePx - 3, oy + py + 5, new Color(plank.r * shade, plank.g * shade, plank.b * shade));
-                    }
-                    c.Rect(ox, oy, ox + 3, oy + TilePx, Hex("#5A3A1E"));
-                    c.Rect(ox + TilePx - 3, oy, ox + TilePx, oy + TilePx, Hex("#5A3A1E"));
-                    break;
-
-                case 'W':
-                    FillNoise(c, ox, oy, Hex("#3E3029"), 0.15f, seed);
-                    for (int row = 0; row < 4; row++)
-                    {
-                        int offset = (row + ty) % 2 == 0 ? 0 : 5;
-                        for (int col = -1; col < 4; col++)
-                        {
-                            float bx = ox + col * 10 + offset, by = oy + row * 8;
-                            var brick = Color.Lerp(Hex("#8C4A33"), Hex("#A8664A"), (float)rng.NextDouble());
-                            float x0 = Mathf.Max(ox, bx + 1), x1 = Mathf.Min(ox + TilePx, bx + 9);
-                            if (x1 > x0) c.Rect(x0, by + 1, x1, by + 7, brick);
-                        }
-                    }
-                    break;
-
-                case '_':
-                    FillNoise(c, ox, oy, Hex("#6E6253"), 0.18f, seed);
-                    c.Rect(ox, oy, ox + TilePx, oy + 1, Hex("#4E4539"));
-                    c.Rect(ox, oy, ox + 1, oy + TilePx, Hex("#4E4539"));
-                    c.Rect(ox + 16, oy, ox + 17, oy + TilePx, new Color(0.3f, 0.27f, 0.22f, 0.5f));
-                    c.Rect(ox, oy + 16, ox + TilePx, oy + 17, new Color(0.3f, 0.27f, 0.22f, 0.5f));
-                    break;
-
-                default:
-                    FillNoise(c, ox, oy, Hex("#8A6A44"), 0.22f, seed);
-                    break;
-            }
-        }
-
         static void PaintEdgeShadows(PixelCanvas c, char[,] terrain, int tx, int ty, int w, int h)
         {
             int ox = tx * TilePx, oy = (h - 1 - ty) * TilePx;
@@ -296,31 +215,6 @@ namespace RotaDoCangaco
         static void ShadeRow(PixelCanvas c, int ox, int y, Color col, float a) { for (int x = 0; x < TilePx; x++) c.Blend(ox + x, y, col, a); }
         static void ShadeCol(PixelCanvas c, int x, int oy, Color col, float a) { for (int y = 0; y < TilePx; y++) c.Blend(x, oy + y, col, a); }
 
-        static readonly Color[] CaneGreens =
-        {
-            new Color(0.17f, 0.4f, 0.18f), new Color(0.25f, 0.53f, 0.23f), new Color(0.33f, 0.63f, 0.28f),
-            new Color(0.14f, 0.33f, 0.16f), new Color(0.45f, 0.7f, 0.32f), new Color(0.55f, 0.72f, 0.3f)
-        };
-
-        static void PaintCane(PixelCanvas c, int ox, int oy, System.Random rng, bool exploration)
-        {
-            var shade = new Color(0.08f, 0.17f, 0.16f);
-            var seedColor = new Color(0.55f, 0.6f, 0.3f);
-            if (exploration) seedColor = Color.Lerp(seedColor, shade, 0.55f);
-            for (int i = 0; i < 3; i++)
-                c.Circle(ox + 4 + (float)rng.NextDouble() * 24, oy + 4 + (float)rng.NextDouble() * 24, 2.2f, seedColor);
-            for (int i = 0; i < 12; i++)
-            {
-                float x = ox + (float)rng.NextDouble() * TilePx, y = oy + (float)rng.NextDouble() * TilePx;
-                float ang = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float len = 6f + (float)rng.NextDouble() * 9f;
-                float radius = 1.1f + (float)rng.NextDouble() * 1.1f;
-                var leaf = CaneGreens[rng.Next(CaneGreens.Length)];
-                if (exploration) leaf = Color.Lerp(leaf, shade, 0.45f);
-                c.Capsule(x, y, x + Mathf.Cos(ang) * len, y + Mathf.Sin(ang) * len, radius, leaf);
-            }
-        }
-
         static void PaintTree(PixelCanvas c, int ox, int oy, System.Random rng)
         {
             float cx = ox + 16, cy = oy + 16;
@@ -335,8 +229,8 @@ namespace RotaDoCangaco
 
         // ------------------------------------------------------------------ Arena de batalha
 
-        /// <summary>Clareira cercada de cana (ou o pátio do engenho, na luta contra o chefe).</summary>
-        public static Texture2D PaintArena(bool engenho, int seed, bool sertao = false)
+        /// <summary>Clareira de caatinga cercada de rocha (ou o lajedo de pedra, na luta contra o chefe).</summary>
+        public static Texture2D PaintArena(bool lajedo, int seed)
         {
             const int w = 30, h = 17;
             var grid = new char[w, h];
@@ -346,14 +240,14 @@ namespace RotaDoCangaco
             {
                 int border = 2 + (rng.NextDouble() < 0.35 ? 1 : 0);
                 bool edge = x < border || x >= w - border || y < border;
-                if (engenho) grid[x, y] = edge ? 'W' : '_';
+                if (lajedo) grid[x, y] = edge ? 'W' : '_';
                 else grid[x, y] = edge ? '#' : (rng.NextDouble() < 0.25 ? '.' : ',');
             }
-            if (!engenho)
+            if (!lajedo)
                 for (int y = 2; y < h; y++)
                 for (int x = 12; x <= 17; x++)
                     grid[x, y] = '.';
-            return sertao ? PaintSertao(grid, seed) : Paint(grid, seed, true);
+            return PaintSertao(grid, seed);
         }
     }
 }

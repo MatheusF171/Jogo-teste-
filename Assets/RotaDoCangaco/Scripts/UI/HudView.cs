@@ -38,8 +38,7 @@ namespace RotaDoCangaco
             root = rt;
 
             // Painel do jogador (canto superior esquerdo)
-            var panel = UIFactory.Panel(root, "Jogador", UIFactory.PanelColor);
-            panel.raycastTarget = false;
+            var panel = UIFactory.FramePanel(root, "Jogador");
             var prt = panel.rectTransform;
             prt.anchorMin = prt.anchorMax = new Vector2(0f, 1f);
             prt.sizeDelta = new Vector2(470, 200);
@@ -51,7 +50,7 @@ namespace RotaDoCangaco
             portrait.rectTransform.Stretch(8, 8, 8, 8);
             portraitAnim = HeroAnimator.Attach(portrait.gameObject);
 
-            nameText = UIFactory.Text(panel.transform, "Nome", "", 24, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold);
+            nameText = UIFactory.Text(panel.transform, "Nome", "", 24, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold).SignStyle();
             nameText.rectTransform.Place(new Vector2(0f, 1f), new Vector2(285, -30), new Vector2(320, 30));
 
             hpBar = new UIBar(panel.transform, "Vida", new Color(0.85f, 0.2f, 0.25f), 18);
@@ -68,11 +67,11 @@ namespace RotaDoCangaco
             scoreText = UIFactory.Text(panel.transform, "Pontos", "", 21, UIFactory.Accent, TextAnchor.MiddleLeft, FontStyle.Bold);
             scoreText.rectTransform.Place(new Vector2(0f, 1f), new Vector2(375, -138), new Vector2(200, 30));
 
-            deckInfoText = UIFactory.Text(panel.transform, "InfoBaralho", "", 15, new Color(0.8f, 0.8f, 0.85f), TextAnchor.MiddleLeft);
+            deckInfoText = UIFactory.Text(panel.transform, "InfoBaralho", "", 15, new Color(0.88f, 0.8f, 0.68f), TextAnchor.MiddleLeft);
             deckInfoText.rectTransform.Place(new Vector2(0f, 1f), new Vector2(235, -178), new Vector2(420, 24));
 
             // Título e objetivo (topo central)
-            title = UIFactory.Text(root, "Fase", "", 30, Color.white, TextAnchor.UpperCenter, FontStyle.Bold);
+            title = UIFactory.Text(root, "Fase", "", 30, Color.white, TextAnchor.UpperCenter, FontStyle.Bold).SignStyle();
             title.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -50), new Vector2(900, 80));
             objectiveText = UIFactory.Text(root, "Objetivo", "", 19, UIFactory.Accent, TextAnchor.UpperCenter);
             objectiveText.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -112), new Vector2(900, 30));
@@ -81,14 +80,13 @@ namespace RotaDoCangaco
             toastText.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -180), new Vector2(1100, 50));
 
             // Minimapa (canto superior direito)
-            var mapFrame = UIFactory.Panel(root, "Minimapa", UIFactory.PanelColor);
-            mapFrame.raycastTarget = false;
+            var mapFrame = UIFactory.FramePanel(root, "Minimapa");
             var mrt = mapFrame.rectTransform;
-            float mw = MapData.Width * MiniTile, mh = MapData.Height * MiniTile;
+            float mw = SertaoMap.Width * MiniTile, mh = SertaoMap.Height * MiniTile;
             mrt.anchorMin = mrt.anchorMax = new Vector2(1f, 1f);
             mrt.sizeDelta = new Vector2(mw + 20, mh + 92);
             mrt.anchoredPosition = new Vector2(-(mw + 20) * 0.5f - 15, -(mh + 92) * 0.5f - 15);
-            var mapLabel = UIFactory.Text(mapFrame.transform, "Rotulo", "MAPA  <size=15>(M: ver inteiro)</size>", 18, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold);
+            var mapLabel = UIFactory.Text(mapFrame.transform, "Rotulo", "MAPA  <size=15>(M: ver inteiro)</size>", 18, Color.white, TextAnchor.MiddleLeft, FontStyle.Bold).SignStyle();
             mapLabel.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -20), new Vector2(mw, 26));
             var mapImg = UIFactory.Rect(mapFrame.transform, "Imagem");
             mapImg.Place(new Vector2(0.5f, 1f), new Vector2(0, -40 - mh * 0.5f), new Vector2(mw, mh));
@@ -99,8 +97,7 @@ namespace RotaDoCangaco
             progressText.rectTransform.Place(new Vector2(0.5f, 0f), new Vector2(0, 26), new Vector2(mw, 44));
 
             // Dica do que está sob o mouse
-            hoverPanel = UIFactory.Panel(root, "DicaMouse", new Color(0.04f, 0.03f, 0.07f, 0.9f)).gameObject;
-            hoverPanel.GetComponent<Image>().raycastTarget = false;
+            hoverPanel = UIFactory.FramePanel(root, "DicaMouse").gameObject;
             ((RectTransform)hoverPanel.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 120), new Vector2(1000, 60));
             hoverText = UIFactory.Text(hoverPanel.transform, "Texto", "", 20, Color.white);
             hoverText.rectTransform.Stretch(14, 4, 14, 4);
@@ -108,10 +105,10 @@ namespace RotaDoCangaco
 
             var controls = UIFactory.Text(root, "Controles",
                 "WASD/Setas ou clique: andar   ·   B: baralho   ·   M: mapa inteiro   ·   Esc: pausa", 18,
-                new Color(0.85f, 0.85f, 0.9f), TextAnchor.MiddleCenter);
+                UIFactory.BodyText, TextAnchor.MiddleCenter);
             controls.rectTransform.Place(new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(1200, 30));
 
-            var deckButton = UIFactory.Button(root, "BotaoBaralho", "Baralho (B)", () => game.ShowDeck(), UIFactory.ButtonColor, 22);
+            var deckButton = UIFactory.Button(root, "BotaoBaralho", "Baralho (B)", () => game.ShowDeck(), ButtonStyle.Primary, 22);
             ((RectTransform)deckButton.transform).Place(new Vector2(1f, 0f), new Vector2(-120, 60), new Vector2(200, 60));
 
             overviewText = UIFactory.Text(root, "VisaoGeral", "Mapa inteiro — pressione M para voltar", 22, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -147,13 +144,9 @@ namespace RotaDoCangaco
             deckInfoText.text = $"Baralho: {p.Deck.Count}  ·  Energia: {energy}{peso}";
             portraitAnim.SetFatStage(p.FatStage);
 
-            bool sertao = map.Phase == SertaoMap.Phase;
-            if (p.BossDefeated)
-                objectiveText.text = sertao ? "Objetivo: chegue à saída do lajedo"
-                    : $"Objetivo: chegue à porteira para o Sertão (meta: {GameConfig.MinScoreToWin} pts)";
-            else
-                objectiveText.text = sertao ? "Objetivo: derrote o Saci na Pedra do Redemoinho"
-                    : "Objetivo: derrote a Mula Sem Cabeça no velho engenho";
+            objectiveText.text = p.BossDefeated
+                ? $"Objetivo: chegue à saída do lajedo (meta: {GameConfig.MinScoreToWin} pts)"
+                : "Objetivo: derrote o Saci no lajedo da Pedra do Redemoinho";
 
             int groupsLeft = map.All<EncounterEntity>().Count(e => !(e is BossEntity));
             progressText.text = $"Monstros derrotados: {p.MonstersDefeated}  ·  Grupos restantes: {groupsLeft}\n" +

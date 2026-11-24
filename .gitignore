@@ -15,3 +15,10 @@
 *.user
 *.pidb
 *.booproj
+
+# Executável compactado (publicado na aba Releases do GitHub, não no código)
+*.rar
+*.zip
+
+# Imagens dos mapas exportadas para visualização
+/MapasExportados/

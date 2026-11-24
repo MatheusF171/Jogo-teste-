@@ -96,46 +96,47 @@ namespace RotaDoCangaco
         RectTransform BuildMenu()
         {
             var root = UIFactory.Rect(canvasRoot, "Menu").Stretch();
-            var bg = UIFactory.Image(root, "Fundo", SpriteLibrary.Get("chefes_do_folclore"), new Color(0.45f, 0.4f, 0.5f), false);
-            bg.rectTransform.Stretch();
-            bg.preserveAspect = false;
-            var dim = UIFactory.Panel(root, "Escurecer", new Color(0.02f, 0.01f, 0.05f, 0.72f));
-            dim.rectTransform.Stretch(-20, -20, -20, -20);
 
-            var title = UIFactory.Text(root, "Titulo", "A ROTA DO CANGAÇO", 96, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
-            title.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -170), new Vector2(1600, 130));
-            var sub = UIFactory.Text(root, "Sub", "Protótipo · Fase 1: Canavial Assombrado\n<size=24>Batalhas por turnos com cartas contra os chefes do folclore brasileiro</size>",
-                                     32, Color.white, TextAnchor.MiddleCenter);
-            sub.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -280), new Vector2(1500, 90));
+            // Pôr do sol no sertão cobrindo a tela inteira, em qualquer proporção de janela.
+            var bgSprite = SpriteLibrary.Get("menu_fundo");
+            var bg = UIFactory.Image(root, "Fundo", bgSprite, Color.white, false);
+            var fitter = bg.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = bgSprite.rect.width / bgSprite.rect.height;
 
-            var heroGlow = UIFactory.Image(root, "BrilhoHeroi", TextureFactory.Glow, new Color(0.4f, 0.55f, 1f, 0.55f), false);
-            heroGlow.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-460, -80), new Vector2(520, 520));
-            var hero = UIFactory.Image(root, "Heroi", HeroAnimator.Frame(3));
-            hero.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-460, -80), new Vector2(300, 300));
-            HeroAnimator.Attach(hero.gameObject);
-            var heroName = UIFactory.Text(root, "NomeHeroi", "Aprendiz da Cuca", 28, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
-            heroName.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-460, -260), new Vector2(400, 40));
+            // Escurece a parte de baixo para os botões e textos se destacarem.
+            var fade = UIFactory.Image(root, "Escurecer", TextureFactory.VerticalFade, new Color(0.08f, 0.03f, 0.01f, 0.8f), false);
+            fade.rectTransform.anchorMin = Vector2.zero;
+            fade.rectTransform.anchorMax = new Vector2(1f, 0f);
+            fade.rectTransform.pivot = new Vector2(0.5f, 0f);
+            fade.rectTransform.offsetMin = Vector2.zero;
+            fade.rectTransform.offsetMax = new Vector2(0f, 420f);
 
-            var boss = UIFactory.Image(root, "Chefe", SpriteLibrary.Get("mula_carta"));
-            boss.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(470, -90), new Vector2(300, 404));
+            var logo = UIFactory.Image(root, "Logo", SpriteLibrary.Get("logo_titulo"));
+            logo.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -235), new Vector2(1150, 414));
 
-            string[] labels = { "Iniciar", "Instruções", "Sair" };
+            string[] keys = { "Iniciar", "Instrucoes", "Sair" };
+            string[] labels = { "INICIAR", "INSTRUÇÕES", "SAIR" };
             Action[] actions = { () => game.StartNewRun(), ShowInstructions, () => game.Quit() };
             for (int i = 0; i < labels.Length; i++)
             {
-                var b = UIFactory.Button(root, "Botao" + labels[i], labels[i], actions[i], i == 0 ? UIFactory.ButtonColor : UIFactory.ButtonAlt, 34);
-                ((RectTransform)b.transform).Place(new Vector2(0.5f, 0.5f), new Vector2(0, 0 - i * 100), new Vector2(380, 80));
+                var b = UIFactory.Button(root, "Botao" + keys[i], labels[i], actions[i], i == 0 ? ButtonStyle.Primary : ButtonStyle.Secondary, 36);
+                ((RectTransform)b.transform).Place(new Vector2(0.5f, 0.5f), new Vector2(0, -120 - i * 105), new Vector2(420, 88));
             }
 
-            var footer = UIFactory.Text(root, "Rodape", "Tema: História e Cultura Regional · Unity + C#", 20, new Color(0.8f, 0.8f, 0.85f));
-            footer.rectTransform.Place(new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(1200, 30));
+            var tagline = UIFactory.Text(root, "Sub",
+                "Protótipo · Pedra do Redemoinho (Sertão)  ·  Batalhas por turnos com cartas contra os chefes do folclore brasileiro",
+                22, UIFactory.SignText, TextAnchor.MiddleCenter);
+            tagline.rectTransform.Place(new Vector2(0.5f, 0f), new Vector2(0, 78), new Vector2(1700, 32));
+            var footer = UIFactory.Text(root, "Rodape", "Tema: História e Cultura Regional · Unity + C#", 18, new Color(0.9f, 0.8f, 0.65f));
+            footer.rectTransform.Place(new Vector2(0.5f, 0f), new Vector2(0, 42), new Vector2(1200, 28));
             return root;
         }
 
         RectTransform BuildInstructions()
         {
             var root = UIFactory.Rect(canvasRoot, "Instrucoes").Stretch();
-            var bg = UIFactory.Panel(root, "Fundo", new Color(0.04f, 0.03f, 0.08f, 1f));
+            var bg = UIFactory.Panel(root, "Fundo", new Color(0.1f, 0.055f, 0.03f, 1f));
             bg.rectTransform.Stretch(-20, -20, -20, -20);
 
             var title = UIFactory.Text(root, "Titulo", "COMO JOGAR", 64, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -146,20 +147,21 @@ namespace RotaDoCangaco
                 "• Ande com <b>WASD/Setas</b> ou <b>clicando</b> no destino.\n" +
                 "• O mapa mostra tudo desde o início: monstros, baús, cordéis, fogueiras e o chefe. Planeje a rota! (<b>M</b> mostra o mapa inteiro)\n" +
                 "• Morcegos e urubus <b>rondam</b> e perseguem você quando chega perto.\n" +
+                "• Ao lajedo: pela <b>ponte do açude</b> (curta, com piranhas) ou pela <b>serra</b> (longa, mais tesouros).\n" +
                 "• <b>Cordel</b>: responda perguntas sobre a cultura da região e ganhe pontos.\n" +
                 "• <b>Fogueira</b>: recupera vida. <b>Baús</b>: cartas raras, relíquias e remédios.\n" +
                 "• Ao encostar num monstro: <b>Lutar</b>, <b>Pular por cima</b> (sem XP) ou <b>Recuar</b>. Não dá para pular chefes, monstros 5+ níveis abaixo de você, nem estando gordo.\n" +
                 "• <b>Panela de cuscuz</b> (ao lado das fogueiras): cada porção dá um bônus permanente, mas comer demais deixa você pesado: menos energia e menos cartas por turno. Vencer batalhas faz digerir.\n\n" +
                 "<b><color=#FFC845>VIDAS E VITÓRIA</color></b>\n" +
                 $"• Você começa com {GameConfig.StartLives} vidas. Perder uma batalha custa 1 vida.\n" +
-                $"• Derrote a <b>Mula Sem Cabeça</b> e chegue à porteira com {GameConfig.MinScoreToWin} pontos. No Sertão, vença o <b>Saci</b> e saia do lajedo.";
+                $"• Derrote o <b>Saci</b> no lajedo da Pedra do Redemoinho e chegue à saída com {GameConfig.MinScoreToWin} pontos.";
             string right =
                 "<b><color=#FFC845>BATALHA COM CARTAS</color></b>\n" +
                 $"• Todo turno você recebe <b>{GameConfig.StartEnergy} de energia</b> e compra uma mão. Cada carta custa energia.\n" +
                 "• <b>COMBO:</b> jogue cartas em ordem <b>crescente de custo</b> (0 » 1 » 2...) e as próximas ficam mais fortes. <b>Coringas</b> mantêm a sequência.\n" +
                 "• Os inimigos <b>avançam</b> a cada turno (Longe » Médio » Perto). Veja a <b>intenção</b> acima de cada um e equilibre ataque e escudo.\n" +
                 "• A carta <b>Aprendiz da Cuca</b> é você: fica em jogo dando bônus.\n" +
-                "• Clique numa carta (ou tecle 1–9) e depois no alvo. <b>Espaço</b> encerra o turno.\n\n" +
+                "• <b>Arraste</b> a carta até o alvo, ou clique nela (teclas 1–9) e depois no alvo. <b>Espaço</b> encerra o turno.\n\n" +
                 "<b><color=#FFC845>EVOLUÇÃO</color></b>\n" +
                 "• Monstros dão XP. A cada nível, escolha 1 entre 3 cartas novas.\n" +
                 "• Vencer o chefe dá uma carta de habilidade ligada à lenda dele.";
@@ -169,7 +171,7 @@ namespace RotaDoCangaco
             var r = UIFactory.Text(root, "Direita", right, 24, Color.white, TextAnchor.UpperLeft);
             r.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(440, 20), new Vector2(820, 720));
 
-            var back = UIFactory.Button(root, "Voltar", "Voltar", ShowMenu, UIFactory.ButtonColor, 32);
+            var back = UIFactory.Button(root, "Voltar", "Voltar", ShowMenu, ButtonStyle.Primary, 32);
             ((RectTransform)back.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 80), new Vector2(320, 76));
             return root;
         }
@@ -182,7 +184,7 @@ namespace RotaDoCangaco
             overlay.gameObject.SetActive(true);
             overlay.SetAsLastSibling();
             var root = UIFactory.Rect(overlay, name).Stretch();
-            var shade = UIFactory.Panel(root, "Escurecer", new Color(0f, 0f, 0.02f, dim));
+            var shade = UIFactory.Panel(root, "Escurecer", new Color(0.04f, 0.015f, 0f, dim));
             shade.rectTransform.Stretch(-20, -20, -20, -20);
             return root;
         }
@@ -193,9 +195,9 @@ namespace RotaDoCangaco
             var root = OpenOverlay("Mensagem");
             bool hasImage = image != null;
             var size = new Vector2(hasImage ? 1200 : 900, 520);
-            var border = UIFactory.Panel(root, "Borda", new Color(1f, 0.78f, 0.25f, 0.55f));
-            border.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, size + new Vector2(8, 8));
-            var panel = UIFactory.Panel(root, "Painel", new Color(0.09f, 0.07f, 0.13f, 1f));
+            var border = UIFactory.FramePanel(root, "Borda");
+            border.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, size + new Vector2(16, 16));
+            var panel = UIFactory.Panel(root, "Painel", new Color(0.15f, 0.09f, 0.05f, 1f));
             panel.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, size);
 
             float textX = 0f, textW = 820f;
@@ -206,9 +208,9 @@ namespace RotaDoCangaco
                 textX = 165f;
                 textW = 780f;
             }
-            var t = UIFactory.Text(panel.transform, "Titulo", title, 40, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var t = UIFactory.Text(panel.transform, "Titulo", title, 40, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold).SignStyle(UIFactory.Accent);
             t.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(textX, -55), new Vector2(textW, 60));
-            var b = UIFactory.Text(panel.transform, "Texto", body, 25, Color.white, TextAnchor.UpperCenter);
+            var b = UIFactory.Text(panel.transform, "Texto", body, 25, UIFactory.BodyText, TextAnchor.UpperCenter);
             b.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(textX, 20), new Vector2(textW, 260));
 
             if (buttons == null || buttons.Length == 0) buttons = new[] { ("OK", (Action)null) };
@@ -220,7 +222,7 @@ namespace RotaDoCangaco
                 {
                     CloseOverlay();
                     action?.Invoke();
-                }, i == 0 ? UIFactory.ButtonColor : UIFactory.ButtonAlt, 28);
+                }, i == 0 ? ButtonStyle.Primary : ButtonStyle.Secondary, 28);
                 float x = textX + (i - (buttons.Length - 1) * 0.5f) * (bw + 20f);
                 ((RectTransform)button.transform).Place(new Vector2(0.5f, 0f), new Vector2(x, 70), new Vector2(bw, 72));
             }
@@ -230,7 +232,8 @@ namespace RotaDoCangaco
         public void ShowCardChoice(string title, string subtitle, List<CardData> options, Action<CardData> onPick, bool allowSkip)
         {
             var root = OpenOverlay("EscolhaCarta", 0.82f);
-            var t = UIFactory.Text(root, "Titulo", title, 64, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var t = UIFactory.Text(root, "Titulo", title, 64, UIFactory.Accent, TextAnchor.MiddleCenter, FontStyle.Bold).SignStyle(UIFactory.Accent);
+            t.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
             t.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -130), new Vector2(1400, 90));
             var s = UIFactory.Text(root, "Sub", subtitle, 28, Color.white);
             s.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, -200), new Vector2(1400, 50));
@@ -259,7 +262,7 @@ namespace RotaDoCangaco
                 {
                     CloseOverlay();
                     onPick?.Invoke(null);
-                }, UIFactory.ButtonAlt, 26);
+                }, ButtonStyle.Secondary, 26);
                 ((RectTransform)skip.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 90), new Vector2(240, 64));
             }
         }
@@ -310,7 +313,7 @@ namespace RotaDoCangaco
             {
                 CloseOverlay();
                 onAnswered?.Invoke(correct);
-            }, UIFactory.ButtonColor, 28);
+            }, ButtonStyle.Primary, 28);
             ((RectTransform)cont.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 60), new Vector2(280, 66));
             cont.gameObject.SetActive(false);
         }
@@ -340,7 +343,7 @@ namespace RotaDoCangaco
             {
                 CloseOverlay();
                 onClose?.Invoke();
-            }, UIFactory.ButtonColor, 28);
+            }, ButtonStyle.Primary, 28);
             ((RectTransform)close.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 60), new Vector2(280, 66));
         }
 
@@ -425,7 +428,7 @@ namespace RotaDoCangaco
             {
                 CloseOverlay();
                 onClose?.Invoke();
-            }, UIFactory.ButtonColor, 28);
+            }, ButtonStyle.Primary, 28);
             ((RectTransform)stop.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 75), new Vector2(320, 70));
         }
 
@@ -454,7 +457,7 @@ namespace RotaDoCangaco
             {
                 CloseOverlay();
                 onContinue?.Invoke();
-            }, UIFactory.ButtonColor, 30);
+            }, ButtonStyle.Primary, 30);
             ((RectTransform)b.transform).Place(new Vector2(0.5f, 0f), new Vector2(0, 70), new Vector2(300, 70));
         }
 
@@ -476,16 +479,16 @@ namespace RotaDoCangaco
                                    80, victory ? UIFactory.Accent : new Color(1f, 0.35f, 0.35f), TextAnchor.MiddleCenter, FontStyle.Bold);
             t.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(200, 300), new Vector2(1100, 110));
             string sub = victory
-                ? "Você atravessou o Canavial Assombrado e venceu o Saci no Sertão."
+                ? "Você atravessou a caatinga e venceu o Saci na Pedra do Redemoinho."
                 : "Suas vidas acabaram durante a viagem.";
             var s = UIFactory.Text(root, "Sub", sub, 28, Color.white);
             s.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(200, 210), new Vector2(1000, 80));
             var st = UIFactory.Text(root, "Estatisticas", stats, 28, Color.white, TextAnchor.UpperLeft);
             st.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(200, -20), new Vector2(760, 330));
 
-            var again = UIFactory.Button(root, "Novamente", "Jogar novamente", () => { CloseOverlay(); onRestart?.Invoke(); }, UIFactory.ButtonColor, 30);
+            var again = UIFactory.Button(root, "Novamente", "Jogar novamente", () => { CloseOverlay(); onRestart?.Invoke(); }, ButtonStyle.Primary, 30);
             ((RectTransform)again.transform).Place(new Vector2(0.5f, 0.5f), new Vector2(40, -300), new Vector2(340, 76));
-            var menuBtn = UIFactory.Button(root, "Menu", "Menu principal", () => { CloseOverlay(); onMenu?.Invoke(); }, UIFactory.ButtonAlt, 30);
+            var menuBtn = UIFactory.Button(root, "Menu", "Menu principal", () => { CloseOverlay(); onMenu?.Invoke(); }, ButtonStyle.Secondary, 30);
             ((RectTransform)menuBtn.transform).Place(new Vector2(0.5f, 0.5f), new Vector2(400, -300), new Vector2(340, 76));
         }
     }

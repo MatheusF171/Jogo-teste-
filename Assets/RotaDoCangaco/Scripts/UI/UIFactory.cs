@@ -1,9 +1,17 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace RotaDoCangaco
 {
+    /// <summary>Visual dos botões padrão: placas de madeira no estilo do logo (sertão / faroeste).</summary>
+    public enum ButtonStyle
+    {
+        Primary,    // madeira clara com aro dourado (ação principal)
+        Secondary   // madeira escura com aro de bronze
+    }
+
     /// <summary>
     /// Atalhos para montar a interface (UGUI) por código, sem prefabs.
     /// Coordenadas no espaço de referência 1920x1080 (CanvasScaler).
@@ -12,10 +20,31 @@ namespace RotaDoCangaco
     {
         static Font font;
 
-        public static readonly Color PanelColor = new Color(0.07f, 0.06f, 0.1f, 0.92f);
+        public static readonly Color PanelColor = new Color(0.15f, 0.09f, 0.05f, 0.92f);
         public static readonly Color Accent = new Color(1f, 0.78f, 0.25f);
-        public static readonly Color ButtonColor = new Color(0.55f, 0.22f, 0.62f);
-        public static readonly Color ButtonAlt = new Color(0.22f, 0.3f, 0.45f);
+        public static readonly Color SignText = new Color(1f, 0.91f, 0.72f);
+        public static readonly Color SignTextOutline = new Color(0.16f, 0.07f, 0.02f, 1f);
+        /// <summary>Texto corrido sobre os painéis de couro (creme suave).</summary>
+        public static readonly Color BodyText = new Color(0.96f, 0.9f, 0.8f);
+
+        /// <summary>Painel de couro com aro de bronze (tema do menu principal).</summary>
+        public static Image FramePanel(Transform parent, string name)
+        {
+            var img = Panel(parent, name, Color.white, TextureFactory.FramePanel);
+            img.raycastTarget = false;
+            return img;
+        }
+
+        /// <summary>Texto no estilo das placas: creme com contorno marrom.</summary>
+        public static Text SignStyle(this Text text, Color? color = null)
+        {
+            text.color = color ?? SignText;
+            var o = text.GetComponent<Outline>();
+            if (o == null) o = text.gameObject.AddComponent<Outline>();
+            o.effectColor = SignTextOutline;
+            o.effectDistance = new Vector2(2f, -2f);
+            return text;
+        }
 
         public static Font Font
         {
@@ -127,10 +156,66 @@ namespace RotaDoCangaco
             return btn;
         }
 
+        /// <summary>Botão padrão do jogo: placa de madeira com aro metálico e texto creme.</summary>
+        public static Button Button(Transform parent, string name, string label, Action onClick, ButtonStyle style = ButtonStyle.Primary, int fontSize = 30)
+        {
+            var btn = Button(parent, name, label, onClick, Color.white, fontSize);
+            var img = (Image)btn.targetGraphic;
+            img.sprite = style == ButtonStyle.Primary ? TextureFactory.WoodButton : TextureFactory.WoodButtonDark;
+            img.type = UnityEngine.UI.Image.Type.Sliced;
+
+            var colors = btn.colors;
+            colors.normalColor = new Color(0.94f, 0.94f, 0.94f);
+            colors.selectedColor = colors.normalColor;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.72f, 0.72f, 0.72f);
+            colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.75f);
+            btn.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            text.color = SignText;
+            text.rectTransform.Stretch(22, 6, 22, 8);
+            var outline = text.GetComponent<Outline>();
+            outline.effectColor = SignTextOutline;
+            outline.effectDistance = new Vector2(2f, -2f);
+            var shadow = text.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(0f, -3f);
+
+            btn.gameObject.AddComponent<ButtonHover>();
+            return btn;
+        }
+
         public static void SetLabel(this Button button, string label)
         {
             var t = button.GetComponentInChildren<Text>();
             if (t != null) t.text = label;
+        }
+    }
+
+    /// <summary>A placa cresce um pouco quando o mouse passa por cima (só se o botão estiver ativo).</summary>
+    public class ButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        const float HoverScale = 1.05f;
+        Button button;
+        bool hovered;
+
+        void Awake() => button = GetComponent<Button>();
+
+        public void OnPointerEnter(PointerEventData eventData) => hovered = true;
+        public void OnPointerExit(PointerEventData eventData) => hovered = false;
+
+        void OnDisable()
+        {
+            hovered = false;
+            transform.localScale = Vector3.one;
+        }
+
+        void Update()
+        {
+            float target = hovered && (button == null || button.interactable) ? HoverScale : 1f;
+            float s = Mathf.Lerp(transform.localScale.x, target, 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime));
+            transform.localScale = new Vector3(s, s, 1f);
         }
     }
 
@@ -143,7 +228,7 @@ namespace RotaDoCangaco
 
         public UIBar(Transform parent, string name, Color fillColor, int fontSize)
         {
-            Root = UIFactory.Panel(parent, name, new Color(0f, 0f, 0f, 0.65f), TextureFactory.RoundedRectSmall).rectTransform;
+            Root = UIFactory.Panel(parent, name, new Color(0.1f, 0.05f, 0.02f, 0.8f), TextureFactory.RoundedRectSmall).rectTransform;
             var f = UIFactory.Panel(Root, "Preenchimento", fillColor, TextureFactory.RoundedRectSmall);
             f.raycastTarget = false;
             fill = f.rectTransform;

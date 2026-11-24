@@ -13,7 +13,8 @@ namespace RotaDoCangaco
         static readonly Dictionary<string, CardData> cards = new Dictionary<string, CardData>();
         static readonly List<CardData> ordered = new List<CardData>();
 
-        public const string BossCardId = "furia_mula";
+        /// <summary>Carta de habilidade ganha ao derrotar o chefe do mapa (o Saci).</summary>
+        public const string BossCardId = "redemoinho";
 
         static CardDatabase() { Build(); }
 
@@ -129,10 +130,7 @@ namespace RotaDoCangaco
                 new SelfDamageEffect(3), new EnergyEffect(2)).Exhaust = true;
 
             // ---------- Habilidade do chefe ----------
-            Add(BossCardId, "Fúria da Mula Sem Cabeça", 2, CardType.Habilidade, CardTarget.AllEnemies, CardRarity.Chefe, "mula", "#FF2D6F",
-                "As chamas que ardem onde deveria haver cabeça agora são suas.",
-                new DamageEffect(10, 1, true), new StatusEffect(StatusType.Queimadura, 4, EffectScope.AllEnemies, true), new BlockEffect(5));
-            Add("redemoinho", "Redemoinho do Saci", 2, CardType.Habilidade, CardTarget.AllEnemies, CardRarity.Chefe, "saci", "#AA7FDD",
+            Add(BossCardId, "Redemoinho do Saci", 2, CardType.Habilidade, CardTarget.AllEnemies, CardRarity.Chefe, "saci", "#AA7FDD",
                 "Um vento que levanta poeira e derruba quem estiver pela frente.",
                 new DamageEffect(8, 1, true), new StatusEffect(StatusType.Fraqueza, 2, EffectScope.AllEnemies));
         }

@@ -81,12 +81,123 @@ namespace RotaDoCangaco
             return c.ToSprite(100f, border);
         }
 
+        // ------------------------------------------------------------------ Botões no estilo placa de madeira
+
+        static Sprite woodButton, woodButtonDark, verticalFade;
+
+        /// <summary>Placa de madeira clara com aro dourado e rebites (botão principal). Sprite 9-slice.</summary>
+        public static Sprite WoodButton => woodButton != null ? woodButton
+            : (woodButton = MakeWoodSign(Hex("#B4642E"), Hex("#E2B04A"), Hex("#9C6A24"), 11));
+
+        /// <summary>Placa de madeira escura com aro de bronze (botão secundário). Sprite 9-slice.</summary>
+        public static Sprite WoodButtonDark => woodButtonDark != null ? woodButtonDark
+            : (woodButtonDark = MakeWoodSign(Hex("#6B3A1E"), Hex("#B5834A"), Hex("#6E4A22"), 23));
+
+        /// <summary>Degradê vertical (opaco embaixo, transparente em cima) para escurecer parte da tela.</summary>
+        public static Sprite VerticalFade
+        {
+            get
+            {
+                if (verticalFade != null) return verticalFade;
+                var c = new PixelCanvas(4, 64);
+                for (int y = 0; y < 64; y++)
+                {
+                    float a = 1f - y / 63f;
+                    for (int x = 0; x < 4; x++) c.Set(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+                return verticalFade = c.ToSprite();
+            }
+        }
+
+        static Sprite framePanel;
+
+        /// <summary>
+        /// Painel de couro escuro com aro de bronze (mesma paleta das placas do menu).
+        /// O miolo é levemente translúcido. Sprite 9-slice; use com cor branca.
+        /// </summary>
+        public static Sprite FramePanel
+        {
+            get
+            {
+                if (framePanel != null) return framePanel;
+                const int s = 64;
+                var c = new PixelCanvas(s, s);
+                var outline = Hex("#1E0F07");
+                c.RoundRect(0, 0, s, s, 10, outline);
+                c.RoundRect(2, 2, s - 2, s - 2, 8, Hex("#7A4E1C"));
+                c.RoundRect(2, 3.5f, s - 2, s - 2, 8, Hex("#C99446"));
+                c.RoundRect(4.5f, 4.5f, s - 4.5f, s - 4.5f, 6, outline);
+
+                // Miolo translúcido (substitui os pixels, não mistura com o contorno).
+                var inner = new Color(0.15f, 0.09f, 0.05f, 0.88f);
+                float x0 = 6f, x1 = s - 6f, r = 5f;
+                float cx = s * 0.5f, half = (x1 - x0) * 0.5f;
+                for (int y = 0; y < s; y++)
+                for (int x = 0; x < s; x++)
+                {
+                    float qx = Mathf.Max(Mathf.Abs(x + 0.5f - cx) - (half - r), 0f);
+                    float qy = Mathf.Max(Mathf.Abs(y + 0.5f - cx) - (half - r), 0f);
+                    float d = Mathf.Sqrt(qx * qx + qy * qy) - r;
+                    float cov = Mathf.Clamp01(0.5f - d);
+                    if (cov > 0f) c.Set(x, y, Color.Lerp(c.Get(x, y), inner, cov));
+                }
+                // Filete claro logo abaixo do aro de cima.
+                c.Capsule(10, s - 8.5f, s - 10, s - 8.5f, 0.6f, new Color(1f, 0.85f, 0.6f, 0.16f));
+                return framePanel = c.ToSprite(100f, 16f);
+            }
+        }
+
+        static Sprite MakeWoodSign(Color wood, Color rimLight, Color rimDark, int seed)
+        {
+            const int w = 128, h = 64;
+            var c = new PixelCanvas(w, h);
+            var outline = Hex("#24120A");
+            var woodDark = Color.Lerp(wood, outline, 0.45f);
+            var woodLight = Color.Lerp(wood, Hex("#F2C27A"), 0.3f);
+            var rng = new System.Random(seed);
+
+            // Contorno, aro metálico com bisel e filete escuro por dentro.
+            c.RoundRect(0, 0, w, h, 12, outline);
+            c.RoundRect(3, 3, w - 3, h - 3, 10, rimDark);
+            c.RoundRect(3, 6, w - 3, h - 3, 10, rimLight);
+            c.RoundRect(7, 7, w - 7, h - 7, 7, outline);
+
+            // Duas tábuas com veios horizontais (esticam bem no 9-slice).
+            c.RoundRect(9, 9, w - 9, h - 9, 6, wood);
+            for (int i = 0; i < 11; i++)
+            {
+                float y = 11.5f + i * 3.9f + (float)rng.NextDouble() * 1.2f;
+                var grain = rng.NextDouble() < 0.6 ? woodDark : woodLight;
+                grain.a = 0.35f + (float)rng.NextDouble() * 0.3f;
+                c.Capsule(11, y, w - 11, y + (float)rng.NextDouble() * 2f - 1f, 0.55f, grain);
+            }
+            c.Capsule(9, h * 0.5f, w - 9, h * 0.5f, 0.9f, new Color(outline.r, outline.g, outline.b, 0.85f));
+            c.Capsule(9, h * 0.5f - 1.6f, w - 9, h * 0.5f - 1.6f, 0.5f, new Color(1f, 0.85f, 0.6f, 0.18f));
+            c.RoundRect(9, h - 18, w - 9, h - 9, 6, new Color(1f, 0.92f, 0.75f, 0.13f));
+            c.RoundRect(9, 9, w - 9, 16, 6, new Color(0f, 0f, 0f, 0.2f));
+
+            // Rebites nos cantos (ficam fora da área esticada).
+            foreach (var p in new[] { new Vector2(15, 15), new Vector2(w - 15, 15), new Vector2(15, h - 15), new Vector2(w - 15, h - 15) })
+            {
+                c.Circle(p.x, p.y - 0.6f, 3.8f, outline);
+                c.Circle(p.x, p.y, 3f, rimLight);
+                c.Circle(p.x + 0.8f, p.y - 0.8f, 1.6f, rimDark);
+                c.Circle(p.x - 0.9f, p.y + 0.9f, 1.1f, new Color(1f, 1f, 0.9f, 0.8f));
+            }
+            return c.ToSprite(100f, 24f);
+        }
+
+        static Color Hex(string hex)
+        {
+            ColorUtility.TryParseHtmlString(hex, out var col);
+            return col;
+        }
+
         // ------------------------------------------------------------------ Ícones das cartas
 
         public static Sprite CardIcon(CardData card)
         {
             if (card.Icon == "hero") return SpriteLibrary.Get("heroi");
-            if (card.Icon == "mula") return SpriteLibrary.Get("mula_retrato");
             if (card.Icon == "saci") return SpriteLibrary.Get("saci");
             string key = "icon_" + card.Icon + "_" + ColorUtility.ToHtmlStringRGB(card.Tint);
             if (cache.TryGetValue(key, out var s)) return s;

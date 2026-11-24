@@ -21,6 +21,7 @@ namespace RotaDoCangaco
         public MapController Map { get; private set; }
         public BattleController Battle { get; private set; }
         public UIManager UI { get; private set; }
+        public MusicPlayer Music { get; private set; }
 
         readonly Queue<QuizQuestion> quizQueue = new Queue<QuizQuestion>();
         EncounterEntity activeEncounter;
@@ -46,6 +47,7 @@ namespace RotaDoCangaco
             Instance = this;
             Application.targetFrameRate = 60;
             SetupCamera();
+            Music = gameObject.AddComponent<MusicPlayer>(); // trilha sonora (depois da câmera, por causa do AudioListener)
 
             UI = gameObject.AddComponent<UIManager>();
             UI.Build(this);
@@ -72,7 +74,7 @@ namespace RotaDoCangaco
             cam.orthographic = true;
             cam.orthographicSize = 5.5f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.04f, 0.05f, 0.1f);
+            cam.backgroundColor = new Color(0.11f, 0.06f, 0.035f);
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
@@ -102,6 +104,7 @@ namespace RotaDoCangaco
             State = GameState.Menu;
             Map.Clear();
             UI.ShowMenu();
+            Music.PlayMenu();
         }
 
         public void StartNewRun()
@@ -111,16 +114,11 @@ namespace RotaDoCangaco
             quizQueue.Clear();
             foreach (var q in QuizDatabase.Questions.OrderBy(_ => Rng.Next())) quizQueue.Enqueue(q);
 
-            OpenPhase(MapData.Canavial);
-            Toast("Atravesse o canavial e enfrente a Mula Sem Cabeça no velho engenho!", 4f);
-        }
-
-        void OpenPhase(MapPhase phase)
-        {
-            Player.BossDefeated = false;
-            Map.Build(this, phase);
+            Map.Build(this, SertaoMap.Phase);
             UI.Hud.Bind(Map);
+            Music.PlayExploration(restart: true); // partida nova: exploração do início (na tela final, se já toca, segue tocando)
             ReturnToExploration();
+            Toast("Atravesse a caatinga e enfrente o Saci na Pedra do Redemoinho! Pela ponte ou pela serra?", 4.5f);
         }
 
         public void ReturnToExploration()
@@ -146,10 +144,22 @@ namespace RotaDoCangaco
         void ShowPause()
         {
             EnterModal();
+            string music = Music.Muted ? "Música: desligada" : "Música: ligada";
             UI.ShowModal("PAUSA", "A trilha espera por você.\n\n<size=20>Dica: jogue as cartas em ordem crescente de custo para fazer combos!</size>", null,
-                ("Continuar", ReturnToExploration),
-                ("Menu principal", ShowMenu),
-                ("Sair do jogo", Quit));
+                (PauseLabel("Continuar"), ReturnToExploration),
+                (PauseLabel(music), ToggleMusic),
+                (PauseLabel("Menu principal"), ShowMenu),
+                (PauseLabel("Sair do jogo"), Quit));
+        }
+
+        /// <summary>Com 4 botões na pausa a fonte fica um pouco menor para os textos caberem.</summary>
+        static string PauseLabel(string text) => $"<size=24>{text}</size>";
+
+        /// <summary>Liga/desliga a música e reabre a pausa para atualizar o texto do botão.</summary>
+        void ToggleMusic()
+        {
+            Music.Muted = !Music.Muted;
+            ShowPause();
         }
 
         public void ShowDeck()
@@ -215,6 +225,7 @@ namespace RotaDoCangaco
         {
             activeEncounter = encounter;
             State = GameState.Battle;
+            Music.PlayBattle();
             UI.ShowBattle();
             Battle.Begin(encounter.Data, OnBattleFinished);
         }
@@ -222,21 +233,11 @@ namespace RotaDoCangaco
         public void ShowBossIntro(BossEntity boss)
         {
             EnterModal();
-            if (Map.Phase == SertaoMap.Phase)
-            {
-                UI.ShowModal("O REI DO REDEMOINHO",
-                    "O vento levanta poeira no lajedo. Quando a poeira baixa, o Saci já está do outro lado.\n\n" +
-                    "<size=22><color=#FFB0C8>Ele enfraquece o herói com poeira nos olhos e ganha força com metade da vida.</color></size>",
-                    SpriteLibrary.Get(boss.Data.Leader.SpriteKey),
-                    ("Enfrentar!", () => StartEncounter(boss)), ("Ainda não", ReturnToExploration));
-                return;
-            }
-            UI.ShowModal("A FÚRIA SEM CABEÇA",
-                "No pátio do velho engenho, cascos de ferro faíscam na pedra. Onde deveria haver uma cabeça, " +
-                "arde uma labareda. É noite de quinta para sexta...\n\n" +
-                "<size=22><color=#FFB0C8>A Mula invoca Fogos-Fátuos, resiste ao Sono e entra em fúria com metade da vida. " +
+            UI.ShowModal("O REI DO REDEMOINHO",
+                "O vento levanta poeira no lajedo. Quando a poeira baixa, o Saci já está do outro lado.\n\n" +
+                "<size=22><color=#FFB0C8>Ele joga poeira nos olhos, assobia chamando urubus, resiste ao Sono e ganha força com metade da vida. " +
                 "Não dá para pular por cima de um chefe!</color></size>",
-                SpriteLibrary.Get("mula_carta"),
+                SpriteLibrary.Get(boss.Data.Leader.SpriteKey),
                 ("Enfrentar!", () => StartEncounter(boss)),
                 ("Ainda não", ReturnToExploration));
         }
@@ -245,6 +246,7 @@ namespace RotaDoCangaco
         {
             var encounter = activeEncounter;
             activeEncounter = null;
+            Music.PlayExploration(); // vitória ou derrota: volta a trilha da exploração de onde parou
 
             if (!result.PlayerWon)
             {
@@ -296,19 +298,17 @@ namespace RotaDoCangaco
         void OnBossDefeated(BossEntity boss)
         {
             Player.BossDefeated = true;
-            bool sertao = Map.Phase == SertaoMap.Phase;
-            var card = CardDatabase.Get(sertao ? "redemoinho" : CardDatabase.BossCardId);
+            var card = CardDatabase.Get(CardDatabase.BossCardId);
             Player.Deck.Add(card);
             Player.Abilities.Add(card.Name);
             Map.RevealExit();
             UI.Hud.Refresh();
 
-            UI.ShowBossReward(card, boss.Data.Leader.Name, sertao ? "saci" : "mula_carta", () => ProcessLevelUps(() =>
+            UI.ShowBossReward(card, boss.Data.Leader.Name, boss.Data.Leader.SpriteKey, () => ProcessLevelUps(() =>
             {
                 EnterModal();
-                UI.ShowModal("A PORTEIRA SE ABRIU!",
-                    sertao ? "O vento baixou. Siga até a saída dourada do lajedo para concluir a viagem."
-                        : $"Com a Mula derrotada, a porteira do engenho leva ao Sertão. Siga até ela com {GameConfig.MinScoreToWin} pontos.",
+                UI.ShowModal("A SAÍDA SE ABRIU!",
+                    $"O vento baixou. Siga até a saída dourada do lajedo com {GameConfig.MinScoreToWin} pontos para concluir a viagem.",
                     TextureFactory.MapObject("portal"),
                     ("Vamos lá!", ReturnToExploration));
             }));
@@ -363,7 +363,7 @@ namespace RotaDoCangaco
                     Player.EnergyPerTurn++;
                     Player.Relics.Add("Rapadura Encantada");
                     UI.ShowModal("RELÍQUIA: RAPADURA ENCANTADA",
-                        "Um tijolinho de rapadura que nunca acaba, feito no próprio engenho.\n\n<b>+1 de energia em todos os turnos!</b>",
+                        "Um tijolinho de rapadura que nunca acaba, esquecido por um tropeiro na gruta.\n\n<b>+1 de energia em todos os turnos!</b>",
                         TextureFactory.MapObject("chest_relic"),
                         ("Que delícia!", ReturnToExploration));
                     break;
@@ -443,29 +443,17 @@ namespace RotaDoCangaco
         public void TryExit(ExitEntity exit)
         {
             if (State != GameState.Exploration || !exit.Active || !Player.BossDefeated) return;
-            if (Map.Phase == MapData.Canavial)
+            if (Player.Score < GameConfig.MinScoreToWin)
             {
-                if (Player.Score < GameConfig.MinScoreToWin)
-                {
-                    EnterModal();
-                    UI.ShowModal("PONTUAÇÃO INSUFICIENTE",
-                        $"Você precisa de {GameConfig.MinScoreToWin} pontos para seguir ao Sertão. Você tem {Player.Score}.",
-                        null, ("OK", () =>
-                        {
-                            Map.RetreatPlayer();
-                            ReturnToExploration();
-                        }));
-                    return;
-                }
                 EnterModal();
-                UI.ShowModal("RUMO AO SERTÃO", "A estrada segue para a Pedra do Redemoinho. Seu baralho e seus pontos continuam com você.",
-                    TextureFactory.MapObject("portal"),
-                    ("Seguir viagem", () =>
+                UI.ShowModal("PONTUAÇÃO INSUFICIENTE",
+                    $"Você precisa de {GameConfig.MinScoreToWin} pontos para concluir a viagem. Você tem {Player.Score}.\n\n" +
+                    "<size=22>Responda cordéis, abra baús e vença os monstros que restam no mapa.</size>",
+                    null, ("OK", () =>
                     {
-                        OpenPhase(SertaoMap.Phase);
-                        Toast("Contorne o açude e siga até a Pedra do Redemoinho.", 4f);
-                    }),
-                    ("Explorar mais", ReturnToExploration));
+                        Map.RetreatPlayer();
+                        ReturnToExploration();
+                    }));
                 return;
             }
             State = GameState.Ended;
