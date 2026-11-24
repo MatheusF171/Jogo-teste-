@@ -57,11 +57,13 @@
     <Compile Include="Assets\RotaDoCangaco\Scripts\Core\GameManager.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Cards\CardDatabase.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Visual\HeroAnimator.cs" />
+    <Compile Include="Assets\RotaDoCangaco\Scripts\Core\MusicPlayer.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Battle\Combatant.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Map\MapEntities.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Core\GameConfig.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Cards\CardData.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Battle\BattleController.cs" />
+    <Compile Include="Assets\RotaDoCangaco\Scripts\Map\SertaoMap.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Cards\ComboTracker.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\UI\HudView.cs" />
     <Compile Include="Assets\RotaDoCangaco\Scripts\Cards\Deck.cs" />

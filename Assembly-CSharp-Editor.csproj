@@ -53,6 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\RotaDoCangaco\Editor\SpriteImportProcessor.cs" />
+    <Compile Include="Assets\RotaDoCangaco\Editor\AudioImportProcessor.cs" />
     <Compile Include="Assets\RotaDoCangaco\Editor\ProjectTools.cs" />
   </ItemGroup>
   <ItemGroup>
